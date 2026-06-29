@@ -613,13 +613,37 @@ body {
 const STORE = 'reminders_v2';
 let D = { reminders: [], lists: [], view: 'today', cat: 'all', search: '', selectedPrio: 'none', selectedColor: '#007aff', calYear: null, calMonth: null, showCalendar: false, listFilterId: null };
 
+// ── 双层存储桥接层 ──
+const storage = (function(){
+  const KEY = STORE;
+  return {
+    getItem: function(){
+      // 优先从 Android 原生存储读取
+      if(typeof window.AndroidStorage !== 'undefined' && window.AndroidStorage.loadData){
+        try {
+          const v = window.AndroidStorage.loadData(KEY);
+          if(v) return v;
+        } catch(e){}
+      }
+      // 回退到 localStorage
+      return localStorage.getItem(KEY);
+    },
+    setItem: function(value){
+      localStorage.setItem(KEY, value);
+      if(typeof window.AndroidStorage !== 'undefined' && window.AndroidStorage.saveData){
+        try { window.AndroidStorage.saveData(KEY, value); } catch(e){}
+      }
+    }
+  };
+})();
+
 const colors = ['#007aff','#ff3b30','#34c759','#ff9500','#af52de','#5ac8fa','#ffcc00'];
 function randColor(){ return colors[Math.floor(Math.random()*colors.length)]; }
 function uid(){ return 'r'+Date.now()+Math.random().toString(36).slice(2,8); }
 function lid(){ return 'l'+Date.now()+Math.random().toString(36).slice(2,8); }
 
 function load(){
-  try { const s=localStorage.getItem(STORE); if(s){ const p=JSON.parse(s); D.reminders=p.reminders||[]; D.lists=p.lists||[]; } } catch(e){}
+  try { const s=storage.getItem(); if(s){ const p=JSON.parse(s); D.reminders=p.reminders||[]; D.lists=p.lists||[]; } } catch(e){}
   if(!D.lists.length){
     D.lists=[
       {id:lid(),name:'提醒事项',type:'标准',color:'#007aff',icon:'📋'},
@@ -628,7 +652,7 @@ function load(){
     ];
   }
 }
-function save(){ localStorage.setItem(STORE,JSON.stringify({reminders:D.reminders,lists:D.lists})); }
+function save(){ storage.setItem(JSON.stringify({reminders:D.reminders,lists:D.lists})); }
 function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
 // ── Filtering ──
