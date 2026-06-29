@@ -182,6 +182,11 @@ var App = (function(){
     D.showCalendar = false;
     document.getElementById('calToggleBtn').textContent = '日历';
     document.getElementById('calendarPanel').classList.add('hidden');
+    var restoreEls = ['quickCards','searchWrap','categoryTags','tagFilters','suggestList','widgetCard','listsSection','recentDelete','reminderList','emptyState'];
+    restoreEls.forEach(function(id){
+      var e = document.getElementById(id);
+      if(e) e.classList.remove('hidden');
+    });
   }
   function calNav(dir){ CalendarManager.navigate(dir); renderCalendarView(); }
   function calDayClick(ds, el){

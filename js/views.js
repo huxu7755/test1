@@ -72,7 +72,6 @@ var ReminderView = (function(){
     if(!el) return;
     if(D.lists.length >= 1) { el.classList.add('hidden'); return; }
     // 只在不满足条件时显示
-    if(D.lists.length > 0) { el.classList.add('hidden'); return; }
     el.classList.remove('hidden');
     el.innerHTML = '<div class="suggest-item" onclick="quickCreateList(\'日常采购\',\'购物清单\',\'🛒\',\'#34c759\')">'+
       '<span class="suggest-icon">🛒</span>'+
