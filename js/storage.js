@@ -8,12 +8,14 @@ var ReminderStorage = (function(){
       if(typeof window.AndroidStorage !== 'undefined' && window.AndroidStorage.loadData){
         try { var v = window.AndroidStorage.loadData(KEY); if(v) return v; } catch(e){}
       }
-      var v = localStorage.getItem(KEY);
-      if(!v) v = localStorage.getItem('reminders_v2');
-      return v;
+      try {
+        var v = localStorage.getItem(KEY);
+        if(!v) v = localStorage.getItem('reminders_v2');
+        return v;
+      } catch(e) { return null; }
     },
     setItem: function(value){
-      localStorage.setItem(KEY, value);
+      try { localStorage.setItem(KEY, value); } catch(e){}
       if(typeof window.AndroidStorage !== 'undefined' && window.AndroidStorage.saveData){
         try { window.AndroidStorage.saveData(KEY, value); } catch(e){}
       }

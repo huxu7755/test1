@@ -22,7 +22,6 @@ var ReminderManager = (function(){
   }
 
   function getFiltered(D){
-    // 最近删除视图
     if(D.view === 'deleted') {
       var deleted = D.reminders.filter(function(r){ return r.deleted; });
       return sortRemindersInternal(deleted, D.sortBy);
@@ -115,25 +114,21 @@ var ReminderManager = (function(){
     if(r){ r.completed = !r.completed; r.completedAt = r.completed ? new Date().toISOString() : null; }
   }
 
-  // 软删除
   function softDelete(D, id){
     var r = D.reminders.find(function(r){ return r.id === id; });
     if(r){ r.deleted = true; r.deletedAt = new Date().toISOString(); }
   }
 
-  // 恢复
   function restore(D, id){
     var r = D.reminders.find(function(r){ return r.id === id; });
     if(r){ r.deleted = false; r.deletedAt = null; }
   }
 
-  // 永久删除
   function permanentlyDelete(D, id){
     var idx = D.reminders.findIndex(function(r){ return r.id === id; });
     if(idx >= 0) D.reminders.splice(idx, 1);
   }
 
-  // 清理过期删除（30天）
   function cleanExpiredDeleted(D){
     var cutoff = Date.now() - 30*24*60*60*1000;
     D.reminders = D.reminders.filter(function(r){

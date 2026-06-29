@@ -5,7 +5,6 @@ var CalendarManager = (function(){
   var calYear = null;
   var calMonth = null;
 
-  // 节气数据：按公历月日映射（约值）
   var TERMS = {
     '1-05':'小寒','1-20':'大寒','2-04':'立春','2-19':'雨水',
     '3-05':'惊蛰','3-20':'春分','4-05':'清明','4-20':'谷雨',
@@ -16,12 +15,7 @@ var CalendarManager = (function(){
   };
 
   function getTerm(month, day){
-    // 精确节气日期按年份有±1天偏差，这里取近似
-    var candidates = [
-      (month)+'-'+(day),
-      (month)+'-'+(day-1),
-      (month)+'-'+(day+1)
-    ];
+    var candidates = [(month)+'-'+(day),(month)+'-'+(day-1),(month)+'-'+(day+1)];
     for(var i=0; i<candidates.length; i++){
       if(TERMS[candidates[i]]) return TERMS[candidates[i]];
     }
@@ -56,7 +50,7 @@ var CalendarManager = (function(){
     var dhdrs = ['日','一','二','三','四','五','六'];
 
     var rdSet = {};
-    reminders.filter(function(r){ return r.date && !r.completed && !r.deleted; }).forEach(function(r){ rdSet[r.date] = true; });
+    (reminders||[]).filter(function(r){ return r.date && !r.completed && !r.deleted; }).forEach(function(r){ rdSet[r.date] = true; });
 
     var h = '<div class="cal-header"><span class="cal-month-label">'+y+'年 '+mn[m]+'</span><div class="cal-nav"><button class="cal-nav-btn" onclick="calNav(-1)">\u25c0</button><button class="cal-nav-btn" onclick="calNav(1)">\u25b6</button></div></div><div class="cal-grid">';
 
@@ -87,13 +81,14 @@ var CalendarManager = (function(){
     return h;
   }
 
-  function renderDayDetail(ds, reminders){
-    var filtered = reminders.filter(function(r){ return r.date === ds && !r.completed && !r.deleted; });
+  function renderDayDetail(ds, reminders, renderItemFn){
+    if(!renderItemFn) return '<div class="cal-selected-panel"><div class="cal-selected-title">'+ds+' 的提醒事项</div><div class="cal-selected-empty">加载中...</div></div>';
+    var filtered = (reminders||[]).filter(function(r){ return r.date === ds && !r.completed && !r.deleted; });
     var h = '<div class="cal-selected-panel"><div class="cal-selected-title">'+ds+' 的提醒事项</div>';
     if(!filtered.length){
       h += '<div class="cal-selected-empty">暂无提醒事项</div>';
     } else {
-      filtered.forEach(function(r){ h += ReminderView.renderItem(r); });
+      filtered.forEach(function(r){ h += renderItemFn(r); });
     }
     h += '</div>';
     return h;

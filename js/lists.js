@@ -2,10 +2,8 @@
 'use strict';
 
 var ListManager = (function(){
-  // 12种颜色
   var colors = ['#007aff','#ff3b30','#34c759','#ff9500','#af52de','#5ac8fa','#ffcc00','#8B4513','#4B0082','#FF69B4','#8e8e93','#00BFFF'];
 
-  // 54个图标
   var icons = [
     '📋','📌','📅','⭐','🚩','❤️','💙','💚','💛','🧡','💜','🎯',
     '🏠','🏢','🏫','🏥','🛒','🛍️','🎁','🎂','🎓','💊','✂️','📖',
@@ -21,7 +19,7 @@ var ListManager = (function(){
     if(!D.lists.length){
       D.lists=[
         {id:lid(),name:'提醒事项',type:'标准',color:'#007aff',icon:'📋'},
-        {id:lid(),name:'工作',type:'工作',color:'#ff9500',icon:'💼'},
+        {id:lid(),name:'工作',type:'工作',color:'#ff9500',icon:'🏢'},
         {id:lid(),name:'购物清单',type:'购物清单',color:'#34c759',icon:'🛒'}
       ];
     }

@@ -3,21 +3,24 @@
 
 var ReminderView = (function(){
   var D;
+  var tagFiltersExpanded = false;
 
   function init(dataRef){ D = dataRef; }
 
   function esc(s){
+    if(!s) return '';
     var d = document.createElement('div');
     d.textContent = s;
     return d.innerHTML;
   }
 
   function updateHeader(){
+    var el = document.getElementById('headerCount');
+    if(!el) return;
     var total = D.reminders.filter(function(r){ return !r.deleted; }).length;
-    document.getElementById('headerCount').textContent = total ? '('+total+')' : '';
+    el.textContent = total ? '('+total+')' : '';
   }
 
-  // ── 快捷入口卡片 ──
   function renderQuickCards(){
     var el = document.getElementById('quickCards');
     if(!el) return;
@@ -49,8 +52,6 @@ var ReminderView = (function(){
     el.innerHTML = html;
   }
 
-  // ── 标签筛选 ──
-  var tagFiltersExpanded = false;
   function renderTags(){
     var el = document.getElementById('tagFilters');
     if(!el) return;
@@ -59,7 +60,7 @@ var ReminderView = (function(){
     if(!tagKeys.length){ el.classList.add('hidden'); tagFiltersExpanded = false; return; }
     el.classList.remove('hidden');
     var active = D.tagFilter || '';
-    var MAX_SHOW = 4; // 默认显示4个标签（含"所有标签"）
+    var MAX_SHOW = 4;
     var needsFold = tagKeys.length > MAX_SHOW - 1;
     var visibleKeys = needsFold && !tagFiltersExpanded ? tagKeys.slice(0, MAX_SHOW - 1) : tagKeys;
     var hiddenCount = needsFold && !tagFiltersExpanded ? tagKeys.length - visibleKeys.length : 0;
@@ -76,12 +77,10 @@ var ReminderView = (function(){
     el.innerHTML = html;
   }
 
-  // ── 建议列表 ──
   function renderSuggestList(){
     var el = document.getElementById('suggestList');
     if(!el) return;
-    if(D.lists.length >= 1) { el.classList.add('hidden'); return; }
-    // 只在不满足条件时显示
+    if(D.lists.length >= 3) { el.classList.add('hidden'); return; }
     el.classList.remove('hidden');
     el.innerHTML = '<div class="suggest-item" onclick="quickCreateList(\'日常采购\',\'购物清单\',\'🛒\',\'#34c759\')">'+
       '<span class="suggest-icon">🛒</span>'+
@@ -89,28 +88,27 @@ var ReminderView = (function(){
       '<span class="suggest-plus">+</span></div>';
   }
 
-  // ── 列表渲染 ──
   function renderLists(){
     var el = document.getElementById('listsSection');
     var reminderContainer = document.getElementById('reminderList');
+    if(!el) return;
     var html = '';
     D.lists.forEach(function(l){
       var cnt = D.reminders.filter(function(r){ return r.listId===l.id && !r.deleted; }).length;
       html += '<div class="list-item-w" id="listItem-'+l.id+'" oncontextmenu="return false;">'+
         '<div class="list-swipe-bg"><span class="swipe-btn-edit" onclick="event.stopPropagation();editList(\''+l.id+'\')">编辑</span><span class="swipe-btn-del" onclick="event.stopPropagation();deleteListConfirm(\''+l.id+'\')">删除</span></div>'+
-        '<div class="list-item-inner" onclick="showListDetail(\''+l.id+'\')" onlongpress="showListSortMenu(\''+l.id+'\')">'+
-        '<div class="list-icon-sq" style="background:'+l.color+'">'+l.icon+'</div>'+
+        '<div class="list-item-inner" onclick="showListDetail(\''+l.id+'\')">'+
+        '<div class="list-icon-sq" style="background:'+l.color+'">'+esc(l.icon)+'</div>'+
         '<span class="list-name-txt">'+esc(l.name)+'</span>'+
         '<span class="list-count-num">'+cnt+'</span>'+
         '<span class="list-arrow">&gt;</span>'+
         '</div>';
 
-      // 当筛选到此列表时，内联展开提醒
       if(D.listFilterId === l.id){
         var filtered = D.reminders.filter(function(r){ return r.listId===l.id && !r.deleted && !r.completed; });
         if(filtered.length > 0){
           html += '<div class="list-inline-reminders">';
-          filtered.forEach(function(r){ html += ReminderView.renderItem(r); });
+          filtered.forEach(function(r){ html += renderItem(r); });
           html += '</div>';
         }
       }
@@ -118,60 +116,66 @@ var ReminderView = (function(){
     });
     el.innerHTML = html;
 
-    // 当有列表筛选时隐藏独立提醒列表
     if(D.listFilterId){
-      reminderContainer.classList.add('hidden');
-      document.getElementById('emptyState').classList.add('hidden');
+      if(reminderContainer) reminderContainer.classList.add('hidden');
+      var emptyEl = document.getElementById('emptyState');
+      if(emptyEl) emptyEl.classList.add('hidden');
     } else {
-      reminderContainer.classList.remove('hidden');
+      if(reminderContainer) reminderContainer.classList.remove('hidden');
     }
 
-    // 绑定左滑
-    bindListSwipe(el);
-    // Update list select in modal
     var sel = document.getElementById('rList');
-    if(sel) sel.innerHTML = D.lists.map(function(l){ return '<option value="'+l.id+'">'+l.icon+' '+l.name+'</option>'; }).join('');
-    // Update recent delete count
+    if(sel) sel.innerHTML = D.lists.map(function(l){ return '<option value="'+l.id+'">'+esc(l.icon)+' '+esc(l.name)+'</option>'; }).join('');
+
     var delCount = D.reminders.filter(function(r){ return r.deleted; }).length;
     var rdEl = document.getElementById('recentDeleteCount');
     if(rdEl) rdEl.textContent = delCount > 0 ? delCount : '';
     var rd = document.getElementById('recentDelete');
     if(rd) { if(delCount > 0) rd.classList.remove('hidden'); else rd.classList.add('hidden'); }
-    // Update completed entry count
+
     var completedCount = D.reminders.filter(function(r){ return r.completed && !r.deleted; }).length;
     var ceEl = document.getElementById('completedEntryCount');
     if(ceEl) ceEl.textContent = completedCount > 0 ? completedCount : '';
     var ce = document.getElementById('completedEntry');
     if(ce) { if(completedCount > 0) ce.classList.remove('hidden'); else ce.classList.add('hidden'); }
+
+    bindListSwipe(el);
   }
 
   function bindListSwipe(el){
     if(el.dataset.swipeBound === 'true') return;
     el.dataset.swipeBound = 'true';
     var touchStartX = 0, touchStartY = 0, swipedItem = null, longPressTimer = null, longPressTarget = null;
+    var startClientX = 0;
+
     el.addEventListener('touchstart', function(e){
       var inner = e.target.closest('.list-item-inner');
       if(!inner) return;
       swipedItem = inner.closest('.list-item-w');
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
-      // 长按检测
+      startClientX = e.touches[0].clientX;
       longPressTarget = swipedItem;
       longPressTimer = setTimeout(function(){
         var id = longPressTarget ? longPressTarget.id.replace('listItem-','') : null;
-        if(id) showListSortMenu(id);
+        if(id && typeof window.showListSortMenu === 'function') window.showListSortMenu(id);
         longPressTarget = null;
       }, 600);
     },{passive:true});
+
     el.addEventListener('touchmove', function(e){
-      if(longPressTimer){ clearTimeout(longPressTimer); longPressTimer = null; longPressTarget = null; }
+      if(longPressTimer){
+        var dx = Math.abs(e.touches[0].clientX - startClientX);
+        var dy = Math.abs(e.touches[0].clientY - touchStartY);
+        if(dx > 10 || dy > 10){ clearTimeout(longPressTimer); longPressTimer = null; longPressTarget = null; }
+      }
     },{passive:true});
+
     el.addEventListener('touchend', function(e){
       if(longPressTimer){ clearTimeout(longPressTimer); longPressTimer = null; }
       longPressTarget = null;
       if(!swipedItem) return;
       var dx = (e.changedTouches[0]?e.changedTouches[0].clientX:touchStartX) - touchStartX;
-      // 关闭其他打开的
       el.querySelectorAll('.list-item-w.swiped').forEach(function(item){
         if(item !== swipedItem) item.classList.remove('swiped');
       });
@@ -179,6 +183,7 @@ var ReminderView = (function(){
       else if(dx > 40) swipedItem.classList.remove('swiped');
       swipedItem = null;
     });
+
     el.addEventListener('click', function(e){
       if(!e.target.closest('.swipe-btn-edit') && !e.target.closest('.swipe-btn-del')){
         el.querySelectorAll('.list-item-w.swiped').forEach(function(item){ item.classList.remove('swiped'); });
@@ -186,10 +191,10 @@ var ReminderView = (function(){
     });
   }
 
-  // ── 提醒事项渲染 ──
   function renderReminders(){
     var container = document.getElementById('reminderList');
     var empty = document.getElementById('emptyState');
+    if(!container || !empty) return;
     var reminders = ReminderManager.getFiltered(D);
     if(!reminders.length){ container.innerHTML=''; empty.classList.remove('hidden'); return; }
     empty.classList.add('hidden');
@@ -219,7 +224,6 @@ var ReminderView = (function(){
       reminders.forEach(function(r){ html += renderItem(r); });
     }
     container.innerHTML = html;
-    // 绑定左滑删除
     bindSwipeDelete(container);
   }
 
@@ -256,8 +260,8 @@ var ReminderView = (function(){
         '<div class="reminder-title">'+esc(r.title)+'</div>'+
         '<div class="reminder-meta">'+days+'天后自动清除</div>'+
       '</div>'+
-      '<button class="btn-restore" onclick="restoreReminder(\''+r.id+'\')">恢复</button>'+
-      '<button class="btn-perm-del" onclick="permanentlyDeleteReminder(\''+r.id+'\')">删除</button>'+
+      '<button class="btn-restore" onclick="event.stopPropagation();restoreReminder(\''+r.id+'\')">恢复</button>'+
+      '<button class="btn-perm-del" onclick="event.stopPropagation();permanentlyDeleteReminder(\''+r.id+'\')">删除</button>'+
     '</div>';
   }
 
@@ -297,6 +301,7 @@ var ReminderView = (function(){
     var card = document.getElementById('widgetCard');
     var content = document.getElementById('widgetContent');
     var footer = document.getElementById('widgetFooter');
+    if(!card) return;
     var todayReminders = D.reminders.filter(function(r){ return !r.completed && !r.deleted && r.date===ReminderManager.todayStr(); });
     if(!todayReminders.length){ card.classList.add('hidden'); return; }
     card.classList.remove('hidden');
@@ -309,7 +314,6 @@ var ReminderView = (function(){
     footer.textContent = remaining>0 ? '还有 '+remaining+' 项...' : '共 '+todayReminders.length+' 项';
   }
 
-  // ── 图标网格 ──
   function renderIconGrid(selectedIcon){
     var el = document.getElementById('iconGrid');
     if(!el) return;

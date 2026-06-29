@@ -7,7 +7,7 @@ var App = (function(){
     view: 'today', cat: 'all', search: '', tagFilter: '',
     selectedPrio: 'none', selectedColor: '#007aff', selectedIcon: '📋',
     calYear: null, calMonth: null, showCalendar: false, listFilterId: null,
-    sortBy: 'manual', showDeleteView: false
+    sortBy: 'manual'
   };
 
   function load(){
@@ -18,14 +18,15 @@ var App = (function(){
         D.reminders = p.reminders || [];
         D.lists = p.lists || [];
       }
-    } catch(e){}
+    } catch(e){ console.warn('加载数据失败:', e); }
     ListManager.initDefaultLists(D);
-    // 清理过期删除
     ReminderManager.cleanExpiredDeleted(D);
   }
 
   function save(){
-    ReminderStorage.setItem(JSON.stringify({reminders: D.reminders, lists: D.lists}));
+    try {
+      ReminderStorage.setItem(JSON.stringify({reminders: D.reminders, lists: D.lists}));
+    } catch(e){ console.warn('保存数据失败:', e); }
   }
 
   function render(){
@@ -39,30 +40,24 @@ var App = (function(){
     if(D.showCalendar) renderCalendarView();
     save();
     if(localStorage.getItem('auto_backup_on') === 'true'){
-      var lb = localStorage.getItem('last_backup_time');
-      if(!lb || (Date.now() - new Date(lb).getTime() > 24*60*60*1000)){
-        BackupManager.autoBackup({ reminders: D.reminders, lists: D.lists });
-      }
+      try {
+        var lb = localStorage.getItem('last_backup_time');
+        if(!lb || (Date.now() - new Date(lb).getTime() > 24*60*60*1000)){
+          BackupManager.autoBackup({ reminders: D.reminders, lists: D.lists });
+        }
+      } catch(e){}
     }
   }
 
   function renderCalendarView(){
-    document.getElementById('calendarPanel').innerHTML = CalendarManager.render(D.reminders);
+    var el = document.getElementById('calendarPanel');
+    if(el) el.innerHTML = CalendarManager.render(D.reminders);
   }
 
-  // ── View Switching ──
   function switchView(v){
     D.view = v; D.listFilterId = null; D.tagFilter = '';
     D.showCalendar = false; toggleCalendarOff();
-    updateQuickCardsActive(v);
     render();
-  }
-
-  function updateQuickCardsActive(v){
-    document.querySelectorAll('.quick-card').forEach(function(c){ c.classList.remove('active'); });
-    document.querySelectorAll('.view-tab').forEach(function(t){ t.classList.remove('active'); });
-    var tab = document.querySelector('[data-view="'+v+'"]');
-    if(tab) tab.classList.add('active');
   }
 
   function filterByCategory(cat, el){
@@ -70,6 +65,7 @@ var App = (function(){
     resetCatTags(); if(el) el.classList.add('active');
     render();
   }
+
   function resetCatTags(){
     document.querySelectorAll('.cat-tag').forEach(function(t){ t.classList.remove('active'); });
     var allEl = document.querySelector('[data-cat="all"]');
@@ -79,7 +75,6 @@ var App = (function(){
   function filterByList(lid){
     D.view = 'all'; D.cat = 'all'; D.listFilterId = lid; D.tagFilter = '';
     D.showCalendar = false; toggleCalendarOff();
-    updateQuickCardsActive('all');
     render();
   }
 
@@ -89,13 +84,14 @@ var App = (function(){
   }
 
   function onSearch(){
-    D.search = document.getElementById('searchInput').value;
+    var input = document.getElementById('searchInput');
+    D.search = input ? input.value : '';
     D.listFilterId = null; D.tagFilter = '';
     render();
   }
 
-  // ── Toggle Complete ──
   function toggleComplete(id){ ReminderManager.toggleComplete(D, id); render(); }
+
   function toggleCompleteAnimated(id, el){
     if(el){ el.classList.add('check-anim'); setTimeout(function(){ el.classList.remove('check-anim'); },300); }
     ReminderManager.toggleComplete(D, id); render();
@@ -103,53 +99,86 @@ var App = (function(){
 
   // ── Reminder CRUD ──
   function saveReminder(){
-    var title = document.getElementById('rTitle').value.trim();
+    var titleEl = document.getElementById('rTitle');
+    var title = titleEl ? titleEl.value.trim() : '';
     if(!title){ alert('请输入标题'); return; }
-    var imageData = document.getElementById('rImage').dataset.value || '';
-    var imageRemoved = document.getElementById('rImage').dataset.imageRemoved === 'true';
+
+    var imageEl = document.getElementById('rImage');
+    var imageData = imageEl ? (imageEl.dataset.value || '') : '';
+    var imageRemoved = imageEl ? imageEl.dataset.imageRemoved === 'true' : false;
+
+    var listId = '';
+    var rListEl = document.getElementById('rList');
+    if(rListEl && rListEl.value){
+      listId = rListEl.value;
+    } else if(D.lists.length > 0){
+      listId = D.lists[0].id;
+    }
+
     var formData = {
-      title: title, dateTime: document.getElementById('rDateTime').value,
-      location: document.getElementById('rLocationToggle').checked ? document.getElementById('rLocation').value.trim() : '',
-      tag: document.getElementById('rTag').value, notes: document.getElementById('rNotes').value.trim(),
-      flagged: document.getElementById('rFlagged').checked,
-      messageReminder: document.getElementById('rMessageReminder').checked,
-      listId: document.getElementById('rList').value || D.lists[0].id,
-      editId: document.getElementById('rEditId').value,
-      priority: D.selectedPrio, image: imageData, imageRemoved: imageRemoved
+      title: title,
+      dateTime: getElVal('rDateTime'),
+      location: (getElChecked('rLocationToggle') ? getElVal('rLocation') : ''),
+      tag: getElVal('rTag'),
+      notes: getElVal('rNotes'),
+      flagged: getElChecked('rFlagged'),
+      messageReminder: getElChecked('rMessageReminder'),
+      listId: listId,
+      editId: getElVal('rEditId'),
+      priority: D.selectedPrio,
+      image: imageData,
+      imageRemoved: imageRemoved
     };
     ReminderManager.saveReminder(D, formData);
     closeModal('reminderModal'); render();
   }
 
+  function getElVal(id){ var el = document.getElementById(id); return el ? el.value : ''; }
+  function getElChecked(id){ var el = document.getElementById(id); return el ? el.checked : false; }
+
   function editReminder(id){
     var r = D.reminders.find(function(r){ return r.id === id; });
     if(!r) return;
     document.getElementById('reminderModalTitle').textContent = '编辑提醒事项';
-    document.getElementById('rTitle').value = r.title;
-    document.getElementById('rDateTime').value = (r.date||'')+(r.time?'T'+r.time:'');
-    document.getElementById('rLocationToggle').checked = !!r.location;
+    setElVal('rTitle', r.title);
+    setElVal('rDateTime', (r.date||'')+(r.time?'T'+r.time:''));
+    setElChecked('rLocationToggle', !!r.location);
     var locInput = document.getElementById('rLocation');
-    if(r.location){ locInput.classList.remove('hidden'); locInput.value = r.location; }
-    else { locInput.classList.add('hidden'); locInput.value = ''; }
-    document.getElementById('rMessageReminder').checked = r.messageReminder||false;
-    document.getElementById('rTag').value = r.tag||'';
-    document.getElementById('rNotes').value = r.notes||'';
-    document.getElementById('rFlagged').checked = r.flagged||false;
-    document.getElementById('rEditId').value = r.id;
+    if(r.location && locInput){ locInput.classList.remove('hidden'); locInput.value = r.location; }
+    else if(locInput){ locInput.classList.add('hidden'); locInput.value = ''; }
+    setElChecked('rMessageReminder', r.messageReminder||false);
+    setElVal('rTag', r.tag||'');
+    setElVal('rNotes', r.notes||'');
+    setElChecked('rFlagged', r.flagged||false);
+    setElVal('rEditId', r.id);
+    // 设置列表选择
+    if(r.listId){
+      var sel = document.getElementById('rList');
+      if(sel) sel.value = r.listId;
+    }
     D.selectedPrio = r.priority||'none'; resetPrioBtns();
     var pb = document.querySelector('#prioBtns [data-prio="'+(r.priority||'none')+'"]');
     if(pb) pb.classList.add('selected');
-    // 图像预览
     var imgEl = document.getElementById('rImagePreview');
     var imgInput = document.getElementById('rImage');
-    if(r.image){ imgInput.dataset.value = r.image; imgInput.dataset.imageRemoved = 'false'; imgEl.innerHTML = '<img src="'+r.image+'" class="img-preview-thumb">'; imgEl.classList.remove('hidden'); }
-    else { imgInput.dataset.value = ''; imgInput.dataset.imageRemoved = 'false'; imgEl.innerHTML = ''; imgEl.classList.add('hidden'); }
+    var btnRemove = document.getElementById('btnRemoveImg');
+    if(r.image){
+      if(imgInput){ imgInput.dataset.value = r.image; imgInput.dataset.imageRemoved = 'false'; }
+      if(imgEl){ imgEl.innerHTML = '<img src="'+r.image+'" class="img-preview-thumb">'; imgEl.classList.remove('hidden'); }
+      if(btnRemove) btnRemove.classList.remove('hidden');
+    } else {
+      if(imgInput){ imgInput.dataset.value = ''; imgInput.dataset.imageRemoved = 'false'; }
+      if(imgEl){ imgEl.innerHTML = ''; imgEl.classList.add('hidden'); }
+      if(btnRemove) btnRemove.classList.add('hidden');
+    }
     document.getElementById('reminderModal').classList.remove('hidden');
     document.getElementById('fab').classList.add('hidden');
-    // 删除按钮
     document.getElementById('btnDeleteReminder').classList.remove('hidden');
-    setTimeout(function(){ document.getElementById('rTitle').focus(); },300);
+    setTimeout(function(){ var t = document.getElementById('rTitle'); if(t) t.focus(); },300);
   }
+
+  function setElVal(id, val){ var el = document.getElementById(id); if(el) el.value = val; }
+  function setElChecked(id, val){ var el = document.getElementById(id); if(el) el.checked = val; }
 
   function softDeleteReminder(id){ ReminderManager.softDelete(D, id); render(); }
   function restoreReminder(id){ ReminderManager.restore(D, id); render(); }
@@ -160,52 +189,59 @@ var App = (function(){
 
   function showDeleteView(){
     D.view = 'deleted'; D.showCalendar = false; toggleCalendarOff();
-    updateQuickCardsActive('all'); render();
+    render();
   }
 
-  // ── 排序 ──
   function sortReminders(mode){ D.sortBy = mode; render(); }
 
-  // ── 更多菜单 ──
   function showMoreMenu(){
     var el = document.getElementById('moreMenu');
-    if(el.classList.contains('hidden')){ el.classList.remove('hidden'); }
-    else { el.classList.add('hidden'); }
+    if(el.classList.contains('hidden')) el.classList.remove('hidden');
+    else el.classList.add('hidden');
   }
-  function hideMoreMenu(){ document.getElementById('moreMenu').classList.add('hidden'); }
+  function hideMoreMenu(){
+    var el = document.getElementById('moreMenu');
+    if(el) el.classList.add('hidden');
+  }
 
   // ── Calendar ──
   function toggleCalendar(){
     D.showCalendar = !D.showCalendar;
     var btn = document.getElementById('calToggleBtn');
-    btn.textContent = D.showCalendar ? '列表' : '日历';
-    var els = ['calendarPanel','widgetCard','listsSection','reminderList','searchWrap','tagFilters','emptyState','quickCards','suggestList','recentDelete'];
+    if(btn) btn.textContent = D.showCalendar ? '列表' : '日历';
+    var toggleEls = ['quickCards','searchWrap','tagFilters','suggestList','widgetCard','listsSection','recentDelete','completedEntry','reminderList','emptyState'];
+    var calPanel = document.getElementById('calendarPanel');
     if(D.showCalendar){
-      els.forEach(function(id){ var e=document.getElementById(id); if(e) e.classList.add('hidden'); });
-      document.getElementById('calendarPanel').classList.remove('hidden');
+      toggleEls.forEach(function(id){ var e=document.getElementById(id); if(e) e.classList.add('hidden'); });
+      if(calPanel) calPanel.classList.remove('hidden');
       CalendarManager.reset(); renderCalendarView();
     } else {
-      els.forEach(function(id){ var e=document.getElementById(id); if(e) e.classList.remove('hidden'); });
-      document.getElementById('calendarPanel').classList.add('hidden');
+      toggleEls.forEach(function(id){ var e=document.getElementById(id); if(e) e.classList.remove('hidden'); });
+      if(calPanel) calPanel.classList.add('hidden');
       render();
     }
   }
+
   function toggleCalendarOff(){
     D.showCalendar = false;
-    document.getElementById('calToggleBtn').textContent = '日历';
-    document.getElementById('calendarPanel').classList.add('hidden');
-    var restoreEls = ['quickCards','searchWrap','tagFilters','suggestList','widgetCard','listsSection','recentDelete','reminderList','emptyState'];
+    var btn = document.getElementById('calToggleBtn');
+    if(btn) btn.textContent = '日历';
+    var calPanel = document.getElementById('calendarPanel');
+    if(calPanel) calPanel.classList.add('hidden');
+    var restoreEls = ['quickCards','searchWrap','tagFilters','suggestList','widgetCard','listsSection','completedEntry','recentDelete','reminderList','emptyState'];
     restoreEls.forEach(function(id){
       var e = document.getElementById(id);
       if(e) e.classList.remove('hidden');
     });
   }
+
   function calNav(dir){ CalendarManager.navigate(dir); renderCalendarView(); }
+
   function calDayClick(ds, el){
     document.querySelectorAll('.cal-day.selected').forEach(function(e){ e.classList.remove('selected'); });
     if(el) el.classList.add('selected');
     var dd = document.getElementById('calDateDetail');
-    var h = CalendarManager.renderDayDetail(ds, D.reminders);
+    var h = CalendarManager.renderDayDetail(ds, D.reminders, ReminderView.renderItem);
     var old = dd.querySelector('.cal-selected-panel');
     if(old) old.remove();
     dd.insertAdjacentHTML('beforeend', h);
@@ -214,36 +250,42 @@ var App = (function(){
   // ── Modals ──
   function showNewReminderModal(){
     document.getElementById('reminderModalTitle').textContent = '新建提醒事项';
-    document.getElementById('rTitle').value = '';
-    document.getElementById('rDateTime').value = '';
-    document.getElementById('rLocationToggle').checked = false;
-    document.getElementById('rLocation').classList.add('hidden');
-    document.getElementById('rLocation').value = '';
-    document.getElementById('rMessageReminder').checked = false;
-    document.getElementById('rTag').value = '';
-    document.getElementById('rNotes').value = '';
-    document.getElementById('rFlagged').checked = false;
-    document.getElementById('rEditId').value = '';
+    setElVal('rTitle', '');
+    setElVal('rDateTime', '');
+    setElChecked('rLocationToggle', false);
+    var locEl = document.getElementById('rLocation');
+    if(locEl){ locEl.classList.add('hidden'); locEl.value = ''; }
+    setElChecked('rMessageReminder', false);
+    setElVal('rTag', '');
+    setElVal('rNotes', '');
+    setElChecked('rFlagged', false);
+    setElVal('rEditId', '');
     document.getElementById('btnDeleteReminder').classList.add('hidden');
-    document.getElementById('rImagePreview').innerHTML = ''; document.getElementById('rImagePreview').classList.add('hidden');
-    document.getElementById('rImage').dataset.value = '';
-    document.getElementById('rImage').dataset.imageRemoved = 'false';
-    document.getElementById('btnRemoveImg').classList.add('hidden');
+    var imgPreview = document.getElementById('rImagePreview');
+    if(imgPreview){ imgPreview.innerHTML = ''; imgPreview.classList.add('hidden'); }
+    var imgInput = document.getElementById('rImage');
+    if(imgInput){ imgInput.dataset.value = ''; imgInput.dataset.imageRemoved = 'false'; }
+    var btnRemove = document.getElementById('btnRemoveImg');
+    if(btnRemove) btnRemove.classList.add('hidden');
+    var fileInput = document.getElementById('rImageFile');
+    if(fileInput) fileInput.value = '';
     D.selectedPrio = 'none'; resetPrioBtns();
     var noneBtn = document.querySelector('#prioBtns [data-prio="none"]');
     if(noneBtn) noneBtn.classList.add('selected');
     document.getElementById('reminderModal').classList.remove('hidden');
     document.getElementById('fab').classList.add('hidden');
-    setTimeout(function(){ document.getElementById('rTitle').focus(); },300);
+    setTimeout(function(){ var t = document.getElementById('rTitle'); if(t) t.focus(); },300);
   }
 
   function showNewListModal(){
     document.getElementById('listModalTitle').textContent = '新建列表';
-    document.getElementById('lName').value = '';
-    document.getElementById('lType').value = '标准';
-    document.getElementById('lEditId').value = '';
+    setElVal('lName', '');
+    var typeEl = document.getElementById('lType');
+    if(typeEl) typeEl.value = '标准';
+    setElVal('lEditId', '');
     D.selectedColor = '#007aff'; D.selectedIcon = '📋';
-    resetColorDots(); var dot = document.querySelector('#colorRow [data-color="#007aff"]');
+    resetColorDots();
+    var dot = document.querySelector('#colorRow [data-color="#007aff"]');
     if(dot) dot.classList.add('selected');
     ReminderView.renderIconGrid('📋');
     document.getElementById('listModal').classList.remove('hidden');
@@ -253,11 +295,13 @@ var App = (function(){
     var l = D.lists.find(function(l){ return l.id === id; });
     if(!l) return;
     document.getElementById('listModalTitle').textContent = '编辑列表';
-    document.getElementById('lName').value = l.name;
-    document.getElementById('lType').value = l.type;
-    document.getElementById('lEditId').value = id;
+    setElVal('lName', l.name);
+    var typeEl = document.getElementById('lType');
+    if(typeEl) typeEl.value = l.type;
+    setElVal('lEditId', id);
     D.selectedColor = l.color; D.selectedIcon = l.icon;
-    resetColorDots(); var dot = document.querySelector('#colorRow [data-color="'+l.color+'"]');
+    resetColorDots();
+    var dot = document.querySelector('#colorRow [data-color="'+l.color+'"]');
     if(dot) dot.classList.add('selected');
     ReminderView.renderIconGrid(l.icon);
     document.getElementById('listModal').classList.remove('hidden');
@@ -280,11 +324,17 @@ var App = (function(){
   }
 
   function closeModal(id){
-    document.getElementById(id).classList.add('hidden');
-    document.getElementById('fab').classList.remove('hidden');
+    var el = document.getElementById(id);
+    if(el) el.classList.add('hidden');
+    var fab = document.getElementById('fab');
+    if(fab) fab.classList.remove('hidden');
     hideMoreMenu();
-    if(id==='reminderModal') document.getElementById('btnDeleteReminder').classList.add('hidden');
+    if(id==='reminderModal'){
+      var btnDel = document.getElementById('btnDeleteReminder');
+      if(btnDel) btnDel.classList.add('hidden');
+    }
   }
+
   function closeModalOutside(e, id){
     if(e.target === document.getElementById(id)) closeModal(id);
   }
@@ -295,49 +345,53 @@ var App = (function(){
   function resetColorDots(){ document.querySelectorAll('#colorRow .color-dot').forEach(function(d){ d.classList.remove('selected'); }); }
 
   function saveList(){
-    var name = document.getElementById('lName').value.trim();
+    var nameEl = document.getElementById('lName');
+    var name = nameEl ? nameEl.value.trim() : '';
     if(!name){ alert('请输入列表名称'); return; }
-    ListManager.saveList(D, name, document.getElementById('lType').value, D.selectedIcon, D.selectedColor, document.getElementById('lEditId').value);
+    var typeEl = document.getElementById('lType');
+    var type = typeEl ? typeEl.value : '标准';
+    var editId = getElVal('lEditId');
+    ListManager.saveList(D, name, type, D.selectedIcon, D.selectedColor, editId);
     closeModal('listModal'); render();
   }
 
-  // ── 图像处理 ──
   function handleImageInput(input){
     var file = input.files[0];
     if(!file) return;
     if(file.size > 5*1024*1024){ alert('图片不能超过5MB'); return; }
     var reader = new FileReader();
     reader.onload = function(e){
-      document.getElementById('rImage').dataset.value = e.target.result;
-      document.getElementById('rImage').dataset.imageRemoved = 'false';
+      var imgInput = document.getElementById('rImage');
+      if(imgInput){ imgInput.dataset.value = e.target.result; imgInput.dataset.imageRemoved = 'false'; }
       var preview = document.getElementById('rImagePreview');
-      preview.innerHTML = '<img src="'+e.target.result+'" class="img-preview-thumb">';
-      preview.classList.remove('hidden');
-      document.getElementById('btnRemoveImg').classList.remove('hidden');
+      if(preview){ preview.innerHTML = '<img src="'+e.target.result+'" class="img-preview-thumb">'; preview.classList.remove('hidden'); }
+      var btnRemove = document.getElementById('btnRemoveImg');
+      if(btnRemove) btnRemove.classList.remove('hidden');
     };
     reader.readAsDataURL(file);
   }
 
   function removeImage(){
-    document.getElementById('rImage').dataset.value = '';
-    document.getElementById('rImage').dataset.imageRemoved = 'true';
+    var imgInput = document.getElementById('rImage');
+    if(imgInput){ imgInput.dataset.value = ''; imgInput.dataset.imageRemoved = 'true'; }
     var preview = document.getElementById('rImagePreview');
-    preview.innerHTML = ''; preview.classList.add('hidden');
-    document.getElementById('rImageFile').value = '';
-    document.getElementById('btnRemoveImg').classList.add('hidden');
+    if(preview){ preview.innerHTML = ''; preview.classList.add('hidden'); }
+    var fileInput = document.getElementById('rImageFile');
+    if(fileInput) fileInput.value = '';
+    var btnRemove = document.getElementById('btnRemoveImg');
+    if(btnRemove) btnRemove.classList.add('hidden');
   }
 
-  // ── 快捷工具栏 ──
   function focusField(fieldId){
     var el = document.getElementById(fieldId);
     if(el) { el.scrollIntoView({behavior:'smooth'}); el.focus(); }
   }
 
-  // ── 位置开关 ──
   function toggleLocationField(){
-    var on = document.getElementById('rLocationToggle').checked;
+    var on = document.getElementById('rLocationToggle');
     var input = document.getElementById('rLocation');
-    if(on){ input.classList.remove('hidden'); input.focus(); }
+    if(!on || !input) return;
+    if(on.checked){ input.classList.remove('hidden'); input.focus(); }
     else { input.classList.add('hidden'); input.value = ''; }
   }
 
@@ -348,11 +402,12 @@ var App = (function(){
     var l = D.lists.find(function(l){ return l.id === id; });
     if(!l) return;
     currentDetailListId = id;
-    document.getElementById('listDetailTitle').textContent = l.icon + ' ' + l.name;
+    document.getElementById('listDetailTitle').textContent = (l.icon||'') + ' ' + l.name;
     var reminders = D.reminders.filter(function(r){ return r.listId === id && !r.deleted && !r.completed; });
     var html = '';
     reminders.forEach(function(r){ html += ReminderView.renderItem(r); });
-    document.getElementById('listDetailContent').innerHTML = html || '<div class="empty-state"><div class="empty-state-title">暂无提醒事项</div></div>';
+    var content = document.getElementById('listDetailContent');
+    if(content) content.innerHTML = html || '<div class="empty-state"><div class="empty-state-title">暂无提醒事项</div></div>';
     document.getElementById('listDetailModal').classList.remove('hidden');
     document.getElementById('fab').classList.add('hidden');
   }
@@ -380,16 +435,30 @@ var App = (function(){
     overlay.style.zIndex = '400';
     overlay.onclick = function(e){ if(e.target===overlay) document.body.removeChild(overlay); };
     var items = [
-      '<button class="more-menu-item" onclick="sortReminders(\'date\');closeModal(\'listDetailModal\');document.querySelector(\'.modal-overlay[style*=\\'z-index: 400\\']\')&&document.body.removeChild(document.querySelector(\'.modal-overlay[style*=\\'z-index: 400\\']\'));" style="font-size:15px;padding:14px 16px;">按日期排序</button>',
-      '<button class="more-menu-item" onclick="sortReminders(\'priority\');closeModal(\'listDetailModal\')" style="font-size:15px;padding:14px 16px;">按优先级排序</button>',
-      '<button class="more-menu-item" onclick="sortReminders(\'created\');closeModal(\'listDetailModal\')" style="font-size:15px;padding:14px 16px;">按创建时间排序</button>',
-      '<button class="more-menu-item danger" onclick="deleteListConfirm(\''+currentDetailListId+'\');closeModal(\'listDetailModal\')" style="font-size:15px;padding:14px 16px;">删除列表</button>'
+      '<button class="more-menu-item" style="font-size:15px;padding:14px 16px;" id="listSortDate">按日期排序</button>',
+      '<button class="more-menu-item" style="font-size:15px;padding:14px 16px;" id="listSortPriority">按优先级排序</button>',
+      '<button class="more-menu-item" style="font-size:15px;padding:14px 16px;" id="listSortCreated">按创建时间排序</button>',
+      '<button class="more-menu-item danger" style="font-size:15px;padding:14px 16px;" id="listDeleteBtn">删除列表</button>'
     ];
     overlay.innerHTML = '<div class="modal-sheet" style="max-width:300px;margin:auto;border-radius:var(--radius-xl);" onclick="event.stopPropagation()"><div style="padding:8px 0;">'+items.join('')+'</div></div>';
     document.body.appendChild(overlay);
+
+    document.getElementById('listSortDate').onclick = function(){
+      sortReminders('date'); closeModal('listDetailModal'); document.body.removeChild(overlay);
+    };
+    document.getElementById('listSortPriority').onclick = function(){
+      sortReminders('priority'); closeModal('listDetailModal'); document.body.removeChild(overlay);
+    };
+    document.getElementById('listSortCreated').onclick = function(){
+      sortReminders('created'); closeModal('listDetailModal'); document.body.removeChild(overlay);
+    };
+    document.getElementById('listDeleteBtn').onclick = function(){
+      deleteListConfirm(currentDetailListId);
+      closeModal('listDetailModal');
+      document.body.removeChild(overlay);
+    };
   }
 
-  // ── 列表排序 ──
   function moveListUp(id){ ListManager.moveList(D, id, -1); render(); }
   function moveListDown(id){ ListManager.moveList(D, id, 1); render(); }
 
@@ -401,11 +470,100 @@ var App = (function(){
     overlay.style.zIndex = '400';
     overlay.onclick = function(e){ if(e.target===overlay) document.body.removeChild(overlay); };
     var items = [];
-    if(canUp) items.push('<button class="more-menu-item" onclick="moveListUp(\''+id+'\');document.body.removeChild(document.querySelector(\'.modal-overlay[style*=\\'z-index: 400\\']\'));" style="font-size:15px;padding:14px 16px;">⬆️ 上移</button>');
-    if(canDown) items.push('<button class="more-menu-item" onclick="moveListDown(\''+id+'\');document.body.removeChild(document.querySelector(\'.modal-overlay[style*=\\'z-index: 400\\']\'));" style="font-size:15px;padding:14px 16px;">⬇️ 下移</button>');
+    if(canUp) items.push('<button class="more-menu-item" style="font-size:15px;padding:14px 16px;" id="moveUpBtn">上移</button>');
+    if(canDown) items.push('<button class="more-menu-item" style="font-size:15px;padding:14px 16px;" id="moveDownBtn">下移</button>');
     if(!canUp && !canDown) items.push('<div style="padding:14px 16px;font-size:14px;color:var(--text3);text-align:center;">无法移动</div>');
     overlay.innerHTML = '<div class="modal-sheet" style="max-width:300px;margin:auto;border-radius:var(--radius-xl);" onclick="event.stopPropagation()"><div style="padding:8px 0;">'+items.join('')+'</div></div>';
     document.body.appendChild(overlay);
+    if(canUp) document.getElementById('moveUpBtn').onclick = function(){ moveListUp(id); document.body.removeChild(overlay); };
+    if(canDown) document.getElementById('moveDownBtn').onclick = function(){ moveListDown(id); document.body.removeChild(overlay); };
+  }
+
+  // ── Settings ──
+  function showSettings(){
+    document.getElementById('settingsModal').classList.remove('hidden');
+    document.getElementById('fab').classList.add('hidden');
+    var lbEl = document.getElementById('lastBackupTime');
+    if(lbEl) lbEl.textContent = '上次备份：'+BackupManager.formatLastBackup();
+    var cfg = SyncManager.getConfig();
+    if(cfg){
+      setElVal('syncServer', cfg.server);
+      setElVal('syncUser', cfg.user);
+      setElVal('syncPass', cfg.pass);
+      SyncManager.updateStatus('已配置服务器');
+    } else {
+      setElVal('syncServer', '');
+      setElVal('syncUser', '');
+      setElVal('syncPass', '');
+      SyncManager.updateStatus('未配置同步');
+    }
+    var autoOn = localStorage.getItem('auto_backup_on') === 'true';
+    setElChecked('autoBackupToggle', autoOn);
+  }
+
+  function exportBackup(){
+    BackupManager.exportData({ reminders: D.reminders, lists: D.lists });
+  }
+
+  function importBackup(input){
+    var file = input.files[0];
+    if(!file) return;
+    if(!confirm('恢复备份将覆盖当前所有数据，确定继续？')) { input.value=''; return; }
+    BackupManager.importFile(file, function(err, data){
+      if(err){ alert('备份文件无效: '+(err.message||err)); input.value=''; return; }
+      D.reminders = data.reminders;
+      D.lists = data.lists;
+      render();
+      alert('数据已恢复');
+      input.value = '';
+    });
+  }
+
+  function toggleAutoBackup(){
+    var toggle = document.getElementById('autoBackupToggle');
+    var on = toggle ? toggle.checked : false;
+    try { localStorage.setItem('auto_backup_on', on ? 'true' : 'false'); } catch(e){}
+    if(on) BackupManager.autoBackup({ reminders: D.reminders, lists: D.lists });
+  }
+
+  function saveSyncConfig(){
+    var server = getElVal('syncServer');
+    var user = getElVal('syncUser');
+    var pass = getElVal('syncPass');
+    if(!server || !user || !pass){ alert('请填写完整的服务器信息'); return; }
+    SyncManager.saveConfig(server, user, pass);
+    SyncManager.updateStatus('已保存，正在测试连接...');
+    SyncManager.sync(SyncManager.getConfig(), { reminders: D.reminders, lists: D.lists }, function(err, merged){
+      if(err){ SyncManager.updateStatus('连接失败: '+err); return; }
+      if(merged){
+        D.reminders = merged.reminders;
+        D.lists = merged.lists;
+        render();
+      }
+    });
+  }
+
+  function restoreRemindersData(data){
+    D.reminders = data.reminders || [];
+    D.lists = data.lists || [];
+    render();
+  }
+
+  function importBackupFromText(){
+    BackupManager.importBackupFromText();
+  }
+
+  function syncNow(){
+    var cfg = SyncManager.getConfig();
+    if(!cfg){ alert('请先配置同步服务器'); return; }
+    SyncManager.sync(cfg, { reminders: D.reminders, lists: D.lists }, function(err, merged){
+      if(err) return;
+      if(merged){
+        D.reminders = merged.reminders;
+        D.lists = merged.lists;
+        render();
+      }
+    });
   }
 
   // ── Init ──
@@ -413,7 +571,6 @@ var App = (function(){
     ReminderView.init(D);
     load();
     render();
-    // 点击空白关闭更多菜单
     document.addEventListener('click', function(e){
       if(!e.target.closest('#moreMenu') && !e.target.closest('#moreBtn')){
         hideMoreMenu();
@@ -421,7 +578,7 @@ var App = (function(){
     });
   }
 
-  // ── Global Exposure ──
+  // ── Expose to window ──
   function expose(){
     window.switchView = switchView;
     window.filterByCategory = filterByCategory;
@@ -472,89 +629,6 @@ var App = (function(){
     window.syncNow = syncNow;
     window.importBackupFromText = importBackupFromText;
     window.restoreRemindersData = restoreRemindersData;
-  }
-
-  // ── Settings ──
-  function showSettings(){
-    document.getElementById('settingsModal').classList.remove('hidden');
-    document.getElementById('fab').classList.add('hidden');
-    document.getElementById('lastBackupTime').textContent = '上次备份：'+BackupManager.formatLastBackup();
-    var cfg = SyncManager.getConfig();
-    if(cfg){
-      document.getElementById('syncServer').value = cfg.server;
-      document.getElementById('syncUser').value = cfg.user;
-      document.getElementById('syncPass').value = cfg.pass;
-      SyncManager.updateStatus('已配置服务器');
-    } else {
-      SyncManager.updateStatus('未配置同步');
-    }
-    var autoOn = localStorage.getItem('auto_backup_on') === 'true';
-    document.getElementById('autoBackupToggle').checked = autoOn;
-  }
-
-  function exportBackup(){
-    BackupManager.exportData({ reminders: D.reminders, lists: D.lists });
-  }
-
-  function importBackup(input){
-    var file = input.files[0];
-    if(!file) return;
-    if(!confirm('恢复备份将覆盖当前所有数据，确定继续？')) { input.value=''; return; }
-    BackupManager.importFile(file, function(err, data){
-      if(err){ alert('备份文件无效'); input.value=''; return; }
-      D.reminders = data.reminders;
-      D.lists = data.lists;
-      render();
-      alert('数据已恢复');
-      input.value = '';
-    });
-  }
-
-  function toggleAutoBackup(){
-    var on = document.getElementById('autoBackupToggle').checked;
-    localStorage.setItem('auto_backup_on', on ? 'true' : 'false');
-    if(on) BackupManager.autoBackup({ reminders: D.reminders, lists: D.lists });
-  }
-
-  function saveSyncConfig(){
-    var server = document.getElementById('syncServer').value.trim();
-    var user = document.getElementById('syncUser').value.trim();
-    var pass = document.getElementById('syncPass').value.trim();
-    if(!server || !user || !pass){ alert('请填写完整的服务器信息'); return; }
-    SyncManager.saveConfig(server, user, pass);
-    SyncManager.updateStatus('已保存，正在测试连接...');
-    SyncManager.sync(SyncManager.getConfig(), { reminders: D.reminders, lists: D.lists }, function(err, merged){
-      if(err){ SyncManager.updateStatus('连接失败: '+err); return; }
-      if(merged){
-        D.reminders = merged.reminders;
-        D.lists = merged.lists;
-        render();
-      }
-    });
-  }
-
-  function restoreRemindersData(data){
-    D.reminders = data.reminders;
-    D.lists = data.lists;
-    render();
-  }
-
-  function importBackupFromText(){
-    // 委托给 BackupManager
-    BackupManager.importBackupFromText();
-  }
-
-  function syncNow(){
-    var cfg = SyncManager.getConfig();
-    if(!cfg){ alert('请先配置同步服务器'); return; }
-    SyncManager.sync(cfg, { reminders: D.reminders, lists: D.lists }, function(err, merged){
-      if(err){ return; }
-      if(merged){
-        D.reminders = merged.reminders;
-        D.lists = merged.lists;
-        render();
-      }
-    });
   }
 
   return { init: init, expose: expose };
