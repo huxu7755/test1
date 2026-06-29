@@ -92,6 +92,7 @@ var ReminderManager = (function(){
       tag: formData.tag,
       notes: formData.notes,
       flagged: formData.flagged,
+      messageReminder: formData.messageReminder,
       priority: formData.priority,
       listId: formData.listId,
       completed: existing ? existing.completed : false,

@@ -42,6 +42,16 @@ var ListManager = (function(){
     if(idx >= 0) D.lists.splice(idx, 1);
   }
 
+  function moveList(D, id, direction){
+    var idx = D.lists.findIndex(function(l){ return l.id === id; });
+    if(idx < 0) return;
+    var newIdx = idx + direction;
+    if(newIdx < 0 || newIdx >= D.lists.length) return;
+    var tmp = D.lists[idx];
+    D.lists[idx] = D.lists[newIdx];
+    D.lists[newIdx] = tmp;
+  }
+
   return {
     colors: colors,
     icons: icons,
@@ -49,6 +59,7 @@ var ListManager = (function(){
     lid: lid,
     initDefaultLists: initDefaultLists,
     saveList: saveList,
-    deleteList: deleteList
+    deleteList: deleteList,
+    moveList: moveList
   };
 })();

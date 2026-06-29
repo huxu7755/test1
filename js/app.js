@@ -109,9 +109,10 @@ var App = (function(){
     var imageRemoved = document.getElementById('rImage').dataset.imageRemoved === 'true';
     var formData = {
       title: title, dateTime: document.getElementById('rDateTime').value,
-      location: document.getElementById('rLocation').value.trim(),
+      location: document.getElementById('rLocationToggle').checked ? document.getElementById('rLocation').value.trim() : '',
       tag: document.getElementById('rTag').value, notes: document.getElementById('rNotes').value.trim(),
       flagged: document.getElementById('rFlagged').checked,
+      messageReminder: document.getElementById('rMessageReminder').checked,
       listId: document.getElementById('rList').value || D.lists[0].id,
       editId: document.getElementById('rEditId').value,
       priority: D.selectedPrio, image: imageData, imageRemoved: imageRemoved
@@ -126,7 +127,11 @@ var App = (function(){
     document.getElementById('reminderModalTitle').textContent = '编辑提醒事项';
     document.getElementById('rTitle').value = r.title;
     document.getElementById('rDateTime').value = (r.date||'')+(r.time?'T'+r.time:'');
-    document.getElementById('rLocation').value = r.location||'';
+    document.getElementById('rLocationToggle').checked = !!r.location;
+    var locInput = document.getElementById('rLocation');
+    if(r.location){ locInput.classList.remove('hidden'); locInput.value = r.location; }
+    else { locInput.classList.add('hidden'); locInput.value = ''; }
+    document.getElementById('rMessageReminder').checked = r.messageReminder||false;
     document.getElementById('rTag').value = r.tag||'';
     document.getElementById('rNotes').value = r.notes||'';
     document.getElementById('rFlagged').checked = r.flagged||false;
@@ -211,7 +216,10 @@ var App = (function(){
     document.getElementById('reminderModalTitle').textContent = '新建提醒事项';
     document.getElementById('rTitle').value = '';
     document.getElementById('rDateTime').value = '';
+    document.getElementById('rLocationToggle').checked = false;
+    document.getElementById('rLocation').classList.add('hidden');
     document.getElementById('rLocation').value = '';
+    document.getElementById('rMessageReminder').checked = false;
     document.getElementById('rTag').value = '';
     document.getElementById('rNotes').value = '';
     document.getElementById('rFlagged').checked = false;
@@ -325,6 +333,81 @@ var App = (function(){
     if(el) { el.scrollIntoView({behavior:'smooth'}); el.focus(); }
   }
 
+  // ── 位置开关 ──
+  function toggleLocationField(){
+    var on = document.getElementById('rLocationToggle').checked;
+    var input = document.getElementById('rLocation');
+    if(on){ input.classList.remove('hidden'); input.focus(); }
+    else { input.classList.add('hidden'); input.value = ''; }
+  }
+
+  // ── 列表详情 ──
+  var currentDetailListId = null;
+
+  function showListDetail(id){
+    var l = D.lists.find(function(l){ return l.id === id; });
+    if(!l) return;
+    currentDetailListId = id;
+    document.getElementById('listDetailTitle').textContent = l.icon + ' ' + l.name;
+    var reminders = D.reminders.filter(function(r){ return r.listId === id && !r.deleted && !r.completed; });
+    var html = '';
+    reminders.forEach(function(r){ html += ReminderView.renderItem(r); });
+    document.getElementById('listDetailContent').innerHTML = html || '<div class="empty-state"><div class="empty-state-title">暂无提醒事项</div></div>';
+    document.getElementById('listDetailModal').classList.remove('hidden');
+    document.getElementById('fab').classList.add('hidden');
+  }
+
+  function exportListData(){
+    var l = D.lists.find(function(l){ return l.id === currentDetailListId; });
+    if(!l) return;
+    var reminders = D.reminders.filter(function(r){ return r.listId === currentDetailListId; });
+    var data = { list: l, reminders: reminders, exportedAt: new Date().toISOString() };
+    var json = JSON.stringify(data, null, 2);
+    var blob = new Blob([json], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (l.name || 'list') + '-export.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function showListMoreMenu(){
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.zIndex = '400';
+    overlay.onclick = function(e){ if(e.target===overlay) document.body.removeChild(overlay); };
+    var items = [
+      '<button class="more-menu-item" onclick="sortReminders(\'date\');closeModal(\'listDetailModal\');document.querySelector(\'.modal-overlay[style*=\\'z-index: 400\\']\')&&document.body.removeChild(document.querySelector(\'.modal-overlay[style*=\\'z-index: 400\\']\'));" style="font-size:15px;padding:14px 16px;">按日期排序</button>',
+      '<button class="more-menu-item" onclick="sortReminders(\'priority\');closeModal(\'listDetailModal\')" style="font-size:15px;padding:14px 16px;">按优先级排序</button>',
+      '<button class="more-menu-item" onclick="sortReminders(\'created\');closeModal(\'listDetailModal\')" style="font-size:15px;padding:14px 16px;">按创建时间排序</button>',
+      '<button class="more-menu-item danger" onclick="deleteListConfirm(\''+currentDetailListId+'\');closeModal(\'listDetailModal\')" style="font-size:15px;padding:14px 16px;">删除列表</button>'
+    ];
+    overlay.innerHTML = '<div class="modal-sheet" style="max-width:300px;margin:auto;border-radius:var(--radius-xl);" onclick="event.stopPropagation()"><div style="padding:8px 0;">'+items.join('')+'</div></div>';
+    document.body.appendChild(overlay);
+  }
+
+  // ── 列表排序 ──
+  function moveListUp(id){ ListManager.moveList(D, id, -1); render(); }
+  function moveListDown(id){ ListManager.moveList(D, id, 1); render(); }
+
+  function showListSortMenu(id){
+    var idx = D.lists.findIndex(function(l){ return l.id === id; });
+    var canUp = idx > 0, canDown = idx < D.lists.length - 1;
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.zIndex = '400';
+    overlay.onclick = function(e){ if(e.target===overlay) document.body.removeChild(overlay); };
+    var items = [];
+    if(canUp) items.push('<button class="more-menu-item" onclick="moveListUp(\''+id+'\');document.body.removeChild(document.querySelector(\'.modal-overlay[style*=\\'z-index: 400\\']\'));" style="font-size:15px;padding:14px 16px;">⬆️ 上移</button>');
+    if(canDown) items.push('<button class="more-menu-item" onclick="moveListDown(\''+id+'\');document.body.removeChild(document.querySelector(\'.modal-overlay[style*=\\'z-index: 400\\']\'));" style="font-size:15px;padding:14px 16px;">⬇️ 下移</button>');
+    if(!canUp && !canDown) items.push('<div style="padding:14px 16px;font-size:14px;color:var(--text3);text-align:center;">无法移动</div>');
+    overlay.innerHTML = '<div class="modal-sheet" style="max-width:300px;margin:auto;border-radius:var(--radius-xl);" onclick="event.stopPropagation()"><div style="padding:8px 0;">'+items.join('')+'</div></div>';
+    document.body.appendChild(overlay);
+  }
+
   // ── Init ──
   function init(){
     ReminderView.init(D);
@@ -373,6 +456,14 @@ var App = (function(){
     window.handleImageInput = handleImageInput;
     window.removeImage = removeImage;
     window.focusField = focusField;
+    window.toggleLocationField = toggleLocationField;
+    window.showListDetail = showListDetail;
+    window.exportListData = exportListData;
+    window.showListMoreMenu = showListMoreMenu;
+    window.moveListUp = moveListUp;
+    window.moveListDown = moveListDown;
+    window.showListSortMenu = showListSortMenu;
+    window.toggleTagFold = function(){ ReminderView.toggleTagFold(); };
     window.showSettings = showSettings;
     window.exportBackup = exportBackup;
     window.importBackup = importBackup;

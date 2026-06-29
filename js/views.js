@@ -50,19 +50,29 @@ var ReminderView = (function(){
   }
 
   // ── 标签筛选 ──
+  var tagFiltersExpanded = false;
   function renderTags(){
     var el = document.getElementById('tagFilters');
     if(!el) return;
     var tags = ReminderManager.getAllTags(D);
     var tagKeys = Object.keys(tags);
-    if(!tagKeys.length){ el.classList.add('hidden'); return; }
+    if(!tagKeys.length){ el.classList.add('hidden'); tagFiltersExpanded = false; return; }
     el.classList.remove('hidden');
     var active = D.tagFilter || '';
-    var html = '<span class="tag-label">标签</span><span class="tag-arrow">↓</span>';
+    var MAX_SHOW = 4; // 默认显示4个标签（含"所有标签"）
+    var needsFold = tagKeys.length > MAX_SHOW - 1;
+    var visibleKeys = needsFold && !tagFiltersExpanded ? tagKeys.slice(0, MAX_SHOW - 1) : tagKeys;
+    var hiddenCount = needsFold && !tagFiltersExpanded ? tagKeys.length - visibleKeys.length : 0;
+
+    var html = '<span class="tag-label" onclick="toggleTagFold()" style="cursor:pointer;">标签</span>';
+    html += '<span class="tag-arrow" style="cursor:pointer;" onclick="toggleTagFold()">'+(tagFiltersExpanded?'↑':'↓')+'</span>';
     html += '<span class="tag-btn'+(active===''?' active':'')+'" onclick="filterByTag(\'\')">所有标签</span>';
-    tagKeys.forEach(function(t){
+    visibleKeys.forEach(function(t){
       html += '<span class="tag-btn'+(active===t?' active':'')+'" onclick="filterByTag(\''+esc(t)+'\')">#'+esc(t)+'</span>';
     });
+    if(hiddenCount > 0){
+      html += '<span class="tag-btn tag-more-btn" onclick="toggleTagFold()">+' + hiddenCount + ' 更多</span>';
+    }
     el.innerHTML = html;
   }
 
@@ -86,9 +96,9 @@ var ReminderView = (function(){
     var html = '';
     D.lists.forEach(function(l){
       var cnt = D.reminders.filter(function(r){ return r.listId===l.id && !r.deleted; }).length;
-      html += '<div class="list-item-w" id="listItem-'+l.id+'">'+
+      html += '<div class="list-item-w" id="listItem-'+l.id+'" oncontextmenu="return false;">'+
         '<div class="list-swipe-bg"><span class="swipe-btn-edit" onclick="event.stopPropagation();editList(\''+l.id+'\')">编辑</span><span class="swipe-btn-del" onclick="event.stopPropagation();deleteListConfirm(\''+l.id+'\')">删除</span></div>'+
-        '<div class="list-item-inner" onclick="filterByList(\''+l.id+'\')">'+
+        '<div class="list-item-inner" onclick="showListDetail(\''+l.id+'\')" onlongpress="showListSortMenu(\''+l.id+'\')">'+
         '<div class="list-icon-sq" style="background:'+l.color+'">'+l.icon+'</div>'+
         '<span class="list-name-txt">'+esc(l.name)+'</span>'+
         '<span class="list-count-num">'+cnt+'</span>'+
@@ -138,15 +148,27 @@ var ReminderView = (function(){
   function bindListSwipe(el){
     if(el.dataset.swipeBound === 'true') return;
     el.dataset.swipeBound = 'true';
-    var touchStartX = 0, touchStartY = 0, swipedItem = null;
+    var touchStartX = 0, touchStartY = 0, swipedItem = null, longPressTimer = null, longPressTarget = null;
     el.addEventListener('touchstart', function(e){
       var inner = e.target.closest('.list-item-inner');
       if(!inner) return;
       swipedItem = inner.closest('.list-item-w');
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
+      // 长按检测
+      longPressTarget = swipedItem;
+      longPressTimer = setTimeout(function(){
+        var id = longPressTarget ? longPressTarget.id.replace('listItem-','') : null;
+        if(id) showListSortMenu(id);
+        longPressTarget = null;
+      }, 600);
+    },{passive:true});
+    el.addEventListener('touchmove', function(e){
+      if(longPressTimer){ clearTimeout(longPressTimer); longPressTimer = null; longPressTarget = null; }
     },{passive:true});
     el.addEventListener('touchend', function(e){
+      if(longPressTimer){ clearTimeout(longPressTimer); longPressTimer = null; }
+      longPressTarget = null;
       if(!swipedItem) return;
       var dx = (e.changedTouches[0]?e.changedTouches[0].clientX:touchStartX) - touchStartX;
       // 关闭其他打开的
@@ -304,6 +326,7 @@ var ReminderView = (function(){
     renderQuickCards: renderQuickCards, renderTags: renderTags,
     renderSuggestList: renderSuggestList, renderLists: renderLists,
     renderReminders: renderReminders, renderItem: renderItem,
-    renderWidget: renderWidget, renderIconGrid: renderIconGrid
+    renderWidget: renderWidget, renderIconGrid: renderIconGrid,
+    toggleTagFold: function(){ tagFiltersExpanded = !tagFiltersExpanded; renderTags(); }
   };
 })();

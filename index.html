@@ -115,14 +115,27 @@
       <button class="qt-btn" onclick="document.getElementById('rImageFile').click()">📷 图像</button>
     </div>
 
+    <div class="form-section-title">组织</div>
     <div class="form-group"><input type="text" class="form-input" placeholder="标题" id="rTitle" autofocus></div>
     <div class="form-group">
       <label class="form-lbl">日期与时间</label>
       <input type="datetime-local" class="form-input" id="rDateTime">
     </div>
     <div class="form-group">
-      <label class="form-lbl">地点</label>
-      <input type="text" class="form-input" placeholder="添加地点" id="rLocation">
+      <label class="form-lbl">📍 地点</label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:15px;cursor:pointer;margin-bottom:8px;">
+        <input type="checkbox" id="rLocationToggle" onchange="toggleLocationField()" style="width:20px;height:20px;accent-color:var(--primary);">
+        到达/离开时提醒
+      </label>
+      <input type="text" class="form-input hidden" placeholder="输入地址..." id="rLocation" style="margin-top:4px;">
+    </div>
+    <div class="form-group">
+      <label class="form-lbl">💬 发信息时</label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:15px;cursor:pointer;">
+        <input type="checkbox" id="rMessageReminder" style="width:20px;height:20px;accent-color:var(--primary);">
+        聊天时显示提醒通知
+      </label>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">如选择此选项，当你在信息中与人聊天时，将显示提醒事项通知。</div>
     </div>
     <div class="form-group">
       <label class="form-lbl">标签 & 列表</label>
@@ -146,6 +159,7 @@
       </div>
     </div>
     <div class="form-group">
+      <div class="form-section-title">地点与人物</div>
       <label class="form-lbl">旗标</label>
       <label style="display:flex;align-items:center;gap:10px;font-size:15px;cursor:pointer;">
         <input type="checkbox" id="rFlagged" style="width:20px;height:20px;accent-color:var(--orange);">
@@ -212,6 +226,22 @@
     </div>
     <button class="btn-full" onclick="saveList()">创建列表</button>
     <input type="hidden" id="lEditId" value="">
+  </div>
+</div>
+
+<!-- ── List Detail Modal ── -->
+<div class="modal-overlay hidden" id="listDetailModal" onclick="closeModalOutside(event,'listDetailModal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-hd">
+      <button class="modal-btn-cancel" onclick="closeModal('listDetailModal')">返回</button>
+      <span class="modal-hd-title" id="listDetailTitle">列表名称</span>
+      <div style="display:flex;gap:12px;">
+        <button class="modal-btn-done" onclick="exportListData()" title="分享">📤</button>
+        <button class="modal-btn-done" onclick="showListMoreMenu()">⋯</button>
+      </div>
+    </div>
+    <div id="listDetailContent" style="padding-top:8px;"></div>
   </div>
 </div>
 
