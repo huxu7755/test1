@@ -11,25 +11,30 @@
 </head>
 <body>
 <div id="app">
+
   <!-- Header -->
   <div class="header">
     <div class="header-left">
-      <span class="header-title" id="headerTitle">提醒事项</span>
+      <span class="header-title">提醒事项</span>
       <span class="header-count" id="headerCount"></span>
     </div>
     <div class="header-actions">
       <button class="header-btn" id="calToggleBtn" onclick="toggleCalendar()">日历</button>
       <button class="header-btn primary-btn" onclick="showNewListModal()">+ 列表</button>
+      <button class="header-btn more-btn" id="moreBtn" onclick="showMoreMenu()">⋯</button>
+    </div>
+    <!-- More Menu -->
+    <div class="more-menu hidden" id="moreMenu">
+      <button class="more-menu-item" onclick="sortReminders('date');hideMoreMenu()">排序方式：按日期</button>
+      <button class="more-menu-item" onclick="sortReminders('priority');hideMoreMenu()">排序方式：按优先级</button>
+      <button class="more-menu-item" onclick="sortReminders('created');hideMoreMenu()">排序方式：按创建时间</button>
+      <button class="more-menu-item" onclick="sortReminders('manual');hideMoreMenu()">排序方式：手动</button>
+      <button class="more-menu-item" onclick="hideMoreMenu();switchView('completed')">显示已完成事项</button>
     </div>
   </div>
 
-  <!-- View Switcher -->
-  <div class="view-switcher" id="viewSwitcher">
-    <button class="view-tab active" data-view="today" onclick="switchView('today')">今天</button>
-    <button class="view-tab" data-view="all" onclick="switchView('all')">全部</button>
-    <button class="view-tab" data-view="scheduled" onclick="switchView('scheduled')">计划</button>
-    <button class="view-tab" data-view="completed" onclick="switchView('completed')">完成</button>
-  </div>
+  <!-- Quick Cards -->
+  <div class="quick-cards" id="quickCards"></div>
 
   <!-- Search -->
   <div class="search-wrap" id="searchWrap">
@@ -39,13 +44,11 @@
     </div>
   </div>
 
-  <!-- Category Tags -->
-  <div class="category-tags" id="categoryTags">
-    <button class="cat-tag active" data-cat="all" onclick="filterByCategory('all',this)"><span class="dot" style="background:var(--primary)"></span>全部</button>
-    <button class="cat-tag" data-cat="today" onclick="filterByCategory('today',this)"><span class="dot" style="background:var(--green)"></span>今日待办</button>
-    <button class="cat-tag" data-cat="important" onclick="filterByCategory('important',this)"><span class="dot" style="background:var(--red)"></span>重要且紧急</button>
-    <button class="cat-tag" data-cat="flagged" onclick="filterByCategory('flagged',this)"><span class="dot" style="background:var(--yellow)"></span>旗标</button>
-  </div>
+  <!-- Tag Filters -->
+  <div class="tag-filters hidden" id="tagFilters"></div>
+
+  <!-- Suggest List -->
+  <div class="suggest-list hidden" id="suggestList"></div>
 
   <!-- Scrollable Area -->
   <div class="scroll-area" id="scrollArea">
@@ -62,6 +65,13 @@
     <!-- Lists -->
     <div id="listsSection"></div>
 
+    <!-- Recent Delete -->
+    <div class="recent-delete" id="recentDelete" onclick="showDeleteView()">
+      <span class="rd-icon">🗑️</span>
+      <span>最近删除</span>
+      <span class="rd-count" id="recentDeleteCount"></span>
+    </div>
+
     <!-- Reminders -->
     <div class="reminder-list" id="reminderList"></div>
 
@@ -77,7 +87,7 @@
   <button class="fab" id="fab" onclick="showNewReminderModal()">+</button>
 </div>
 
-<!-- ── New Reminder Modal ── -->
+<!-- ── Reminder Modal ── -->
 <div class="modal-overlay hidden" id="reminderModal" onclick="closeModalOutside(event,'reminderModal')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
@@ -86,6 +96,16 @@
       <span class="modal-hd-title" id="reminderModalTitle">新建提醒事项</span>
       <button class="modal-btn-done" onclick="saveReminder()">添加</button>
     </div>
+
+    <!-- 快捷工具栏 -->
+    <div class="quick-toolbar" id="quickToolbarWrap">
+      <button class="qt-btn" onclick="focusField('rDateTime')">📅 日期</button>
+      <button class="qt-btn" onclick="focusField('rNotes')">📝 备注</button>
+      <button class="qt-btn" onclick="focusField('rTag')"># 标签</button>
+      <button class="qt-btn" onclick="document.getElementById('rFlagged').checked=!document.getElementById('rFlagged').checked">🚩 旗标</button>
+      <button class="qt-btn" onclick="document.getElementById('rImageFile').click()">📷 图像</button>
+    </div>
+
     <div class="form-group"><input type="text" class="form-input" placeholder="标题" id="rTitle" autofocus></div>
     <div class="form-group">
       <label class="form-lbl">日期与时间</label>
@@ -100,11 +120,9 @@
       <div class="form-row">
         <select class="form-select" id="rTag">
           <option value="">无标签</option>
-          <option value="工作">工作</option>
-          <option value="个人">个人</option>
-          <option value="购物">购物</option>
-          <option value="健康">健康</option>
-          <option value="学习">学习</option>
+          <option value="工作">工作</option><option value="个人">个人</option>
+          <option value="购物">购物</option><option value="健康">健康</option>
+          <option value="学习">学习</option><option value="成长">成长</option>
         </select>
         <select class="form-select" id="rList"></select>
       </div>
@@ -122,19 +140,27 @@
       <label class="form-lbl">旗标</label>
       <label style="display:flex;align-items:center;gap:10px;font-size:15px;cursor:pointer;">
         <input type="checkbox" id="rFlagged" style="width:20px;height:20px;accent-color:var(--orange);">
-        标记为重要（旗标 🚩）
+        标记为重要
       </label>
+    </div>
+    <div class="form-group">
+      <label class="form-lbl">添加图像</label>
+      <input type="file" accept="image/*" capture="environment" id="rImageFile" style="display:none" onchange="handleImageInput(this)">
+      <input type="hidden" id="rImage" data-value="">
+      <div class="img-preview hidden" id="rImagePreview"></div>
+      <button type="button" class="btn-remove-img hidden" id="btnRemoveImg" onclick="removeImage()">移除图像</button>
     </div>
     <div class="form-group">
       <label class="form-lbl">备注</label>
       <textarea class="form-textarea" placeholder="备注..." id="rNotes"></textarea>
     </div>
     <button class="btn-full" onclick="saveReminder()">添加提醒事项</button>
+    <button class="btn-delete hidden" id="btnDeleteReminder" onclick="softDeleteReminder(document.getElementById('rEditId').value);closeModal('reminderModal')">删除提醒事项</button>
     <input type="hidden" id="rEditId" value="">
   </div>
 </div>
 
-<!-- ── New List Modal ── -->
+<!-- ── List Modal ── -->
 <div class="modal-overlay hidden" id="listModal" onclick="closeModalOutside(event,'listModal')">
   <div class="modal-sheet" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
@@ -149,6 +175,7 @@
       <select class="form-select" id="lType">
         <option value="标准">标准</option>
         <option value="购物清单">购物清单</option>
+        <option value="智能列表">智能列表</option>
         <option value="工作">工作</option>
         <option value="学习">学习</option>
       </select>
@@ -163,23 +190,23 @@
         <span class="color-dot" data-color="#af52de" style="background:#af52de" onclick="selColor(this)"></span>
         <span class="color-dot" data-color="#5ac8fa" style="background:#5ac8fa" onclick="selColor(this)"></span>
         <span class="color-dot" data-color="#ffcc00" style="background:#ffcc00" onclick="selColor(this)"></span>
+        <span class="color-dot" data-color="#8B4513" style="background:#8B4513" onclick="selColor(this)"></span>
+        <span class="color-dot" data-color="#4B0082" style="background:#4B0082" onclick="selColor(this)"></span>
+        <span class="color-dot" data-color="#FF69B4" style="background:#FF69B4" onclick="selColor(this)"></span>
+        <span class="color-dot" data-color="#8e8e93" style="background:#8e8e93" onclick="selColor(this)"></span>
+        <span class="color-dot" data-color="#00BFFF" style="background:#00BFFF" onclick="selColor(this)"></span>
       </div>
     </div>
     <div class="form-group">
       <label class="form-lbl">图标</label>
-      <select class="form-select" id="lIcon">
-        <option value="📋">📋 列表</option><option value="🛒">🛒 购物</option>
-        <option value="💼">💼 工作</option><option value="🏠">🏠 家庭</option>
-        <option value="📚">📚 学习</option><option value="❤️">❤️ 健康</option>
-        <option value="⭐">⭐ 重要</option><option value="🎯">🎯 目标</option>
-      </select>
+      <div class="icon-grid" id="iconGrid"></div>
     </div>
     <button class="btn-full" onclick="saveList()">创建列表</button>
     <input type="hidden" id="lEditId" value="">
   </div>
 </div>
 
-<!-- JS: 按依赖顺序加载 -->
+<!-- JS -->
 <script src="js/storage.js"></script>
 <script src="js/lists.js"></script>
 <script src="js/reminders.js"></script>

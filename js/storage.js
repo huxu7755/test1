@@ -2,18 +2,15 @@
 'use strict';
 
 var ReminderStorage = (function(){
-  var KEY = 'reminders_v2';
+  var KEY = 'reminders_v3';
   return {
     getItem: function(){
-      // 优先从 Android 原生存储读取
       if(typeof window.AndroidStorage !== 'undefined' && window.AndroidStorage.loadData){
-        try {
-          var v = window.AndroidStorage.loadData(KEY);
-          if(v) return v;
-        } catch(e){}
+        try { var v = window.AndroidStorage.loadData(KEY); if(v) return v; } catch(e){}
       }
-      // 回退到 localStorage
-      return localStorage.getItem(KEY);
+      var v = localStorage.getItem(KEY);
+      if(!v) v = localStorage.getItem('reminders_v2');
+      return v;
     },
     setItem: function(value){
       localStorage.setItem(KEY, value);

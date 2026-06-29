@@ -2,7 +2,17 @@
 'use strict';
 
 var ListManager = (function(){
-  var colors = ['#007aff','#ff3b30','#34c759','#ff9500','#af52de','#5ac8fa','#ffcc00'];
+  // 12种颜色
+  var colors = ['#007aff','#ff3b30','#34c759','#ff9500','#af52de','#5ac8fa','#ffcc00','#8B4513','#4B0082','#FF69B4','#8e8e93','#00BFFF'];
+
+  // 48个图标
+  var icons = [
+    '📋','📌','📅','⭐','🚩','❤️','💙','💚','💛','🧡','💜','🎯',
+    '🏠','🏢','🏫','🏥','🛒','🛍️','🎁','🎂','🎓','💊','✂️','📖',
+    '💳','💰','💪','🏃','🍽️','🍷','🎧','💻','🎮','🏰','⛺','🎵',
+    '☕','🚗','✈️','🚲','🚢','🌍','🐶','🐱','🌸','🌿','🔑','🔔',
+    '✅','❌','⬆️','🔄','📊','📝'
+  ];
 
   function randColor(){ return colors[Math.floor(Math.random()*colors.length)]; }
   function lid(){ return 'l'+Date.now()+Math.random().toString(36).slice(2,8); }
@@ -18,13 +28,7 @@ var ListManager = (function(){
   }
 
   function saveList(D, name, type, icon, color, editId){
-    var list = {
-      id: editId || lid(),
-      name: name,
-      type: type,
-      color: color,
-      icon: icon
-    };
+    var list = { id: editId || lid(), name: name, type: type, color: color, icon: icon };
     if(editId){
       var idx = D.lists.findIndex(function(l){ return l.id === editId; });
       if(idx >= 0) D.lists[idx] = list;
@@ -33,12 +37,18 @@ var ListManager = (function(){
     }
   }
 
-  // 暴露给全局
+  function deleteList(D, id){
+    var idx = D.lists.findIndex(function(l){ return l.id === id; });
+    if(idx >= 0) D.lists.splice(idx, 1);
+  }
+
   return {
     colors: colors,
+    icons: icons,
     randColor: randColor,
     lid: lid,
     initDefaultLists: initDefaultLists,
-    saveList: saveList
+    saveList: saveList,
+    deleteList: deleteList
   };
 })();
