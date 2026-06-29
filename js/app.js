@@ -379,6 +379,7 @@ var App = (function(){
     window.toggleAutoBackup = toggleAutoBackup;
     window.saveSyncConfig = saveSyncConfig;
     window.syncNow = syncNow;
+    window.importBackupFromText = importBackupFromText;
   }
 
   // ── Settings ──

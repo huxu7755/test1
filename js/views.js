@@ -82,6 +82,7 @@ var ReminderView = (function(){
   // ── 列表渲染 ──
   function renderLists(){
     var el = document.getElementById('listsSection');
+    var reminderContainer = document.getElementById('reminderList');
     var html = '';
     D.lists.forEach(function(l){
       var cnt = D.reminders.filter(function(r){ return r.listId===l.id && !r.deleted; }).length;
@@ -92,9 +93,29 @@ var ReminderView = (function(){
         '<span class="list-name-txt">'+esc(l.name)+'</span>'+
         '<span class="list-count-num">'+cnt+'</span>'+
         '<span class="list-arrow">&gt;</span>'+
-        '</div></div>';
+        '</div>';
+
+      // 当筛选到此列表时，内联展开提醒
+      if(D.listFilterId === l.id){
+        var filtered = D.reminders.filter(function(r){ return r.listId===l.id && !r.deleted && !r.completed; });
+        if(filtered.length > 0){
+          html += '<div class="list-inline-reminders">';
+          filtered.forEach(function(r){ html += ReminderView.renderItem(r); });
+          html += '</div>';
+        }
+      }
+      html += '</div>';
     });
     el.innerHTML = html;
+
+    // 当有列表筛选时隐藏独立提醒列表
+    if(D.listFilterId){
+      reminderContainer.classList.add('hidden');
+      document.getElementById('emptyState').classList.add('hidden');
+    } else {
+      reminderContainer.classList.remove('hidden');
+    }
+
     // 绑定左滑
     bindListSwipe(el);
     // Update list select in modal
@@ -106,6 +127,12 @@ var ReminderView = (function(){
     if(rdEl) rdEl.textContent = delCount > 0 ? delCount : '';
     var rd = document.getElementById('recentDelete');
     if(rd) { if(delCount > 0) rd.classList.remove('hidden'); else rd.classList.add('hidden'); }
+    // Update completed entry count
+    var completedCount = D.reminders.filter(function(r){ return r.completed && !r.deleted; }).length;
+    var ceEl = document.getElementById('completedEntryCount');
+    if(ceEl) ceEl.textContent = completedCount > 0 ? completedCount : '';
+    var ce = document.getElementById('completedEntry');
+    if(ce) { if(completedCount > 0) ce.classList.remove('hidden'); else ce.classList.add('hidden'); }
   }
 
   function bindListSwipe(el){

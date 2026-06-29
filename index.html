@@ -66,6 +66,14 @@
     <!-- Lists -->
     <div id="listsSection"></div>
 
+    <!-- Completed Entry -->
+    <div class="completed-entry hidden" id="completedEntry" onclick="switchView('completed')">
+      <span class="ce-icon">✓</span>
+      <span>已完成</span>
+      <span class="ce-count" id="completedEntryCount"></span>
+      <span class="list-arrow">&gt;</span>
+    </div>
+
     <!-- Recent Delete -->
     <div class="recent-delete" id="recentDelete" onclick="showDeleteView()">
       <span class="rd-icon">🗑️</span>

@@ -89,6 +89,12 @@ jobs:
                   super.onCreate(savedInstanceState);
                   WebView webView = new WebView(this);
                   webView.setWebViewClient(new WebViewClient());
+                  webView.setWebChromeClient(new android.webkit.WebChromeClient() {
+                      @Override
+                      public boolean onShowFileChooser(WebView webView, android.webkit.ValueCallback<android.net.Uri[]> filePathCallback, android.webkit.WebChromeClient.FileChooserParams fileChooserParams) {
+                          return super.onShowFileChooser(webView, filePathCallback, fileChooserParams);
+                      }
+                  });
                   WebSettings settings = webView.getSettings();
                   settings.setJavaScriptEnabled(true);
                   settings.setDomStorageEnabled(true);

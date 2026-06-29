@@ -262,6 +262,31 @@ body {
 .list-count-num { color: var(--text3); font-size: 15px; }
 .list-arrow { color: var(--gray3); font-size: 16px; margin-left: 4px; }
 
+/* ── List Inline Reminders ── */
+.list-inline-reminders {
+  padding: 0 0 4px 42px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.list-inline-reminders .reminder-item {
+  box-shadow: none;
+  background: rgba(0,0,0,0.02);
+  border-radius: var(--radius-sm);
+  margin: 0;
+}
+
+/* ── Completed Entry ── */
+.completed-entry {
+  margin: 0 2px 2px; padding: 13px 16px; background: var(--card-bg);
+  border-radius: var(--radius); cursor: pointer; box-shadow: var(--shadow-sm);
+  display: flex; align-items: center; gap: 12px; font-size: 16px; font-weight: 500;
+  transition: all var(--transition); min-height: 52px;
+}
+.completed-entry:active { transform: scale(0.985); }
+.ce-icon { color: var(--green); font-size: 18px; font-weight: 700; }
+.ce-count { color: var(--text3); font-size: 15px; margin-left: auto; }
+
 /* ── Recent Delete Entry ── */
 .recent-delete {
   margin: 0 2px 2px; padding: 13px 16px; background: var(--card-bg);

@@ -20,6 +20,30 @@ var BackupManager = (function(){
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+
+    // 如果 Android 原生存储可用，同时保存
+    if(typeof window.AndroidStorage !== 'undefined' && window.AndroidStorage.saveData){
+      try { window.AndroidStorage.saveData('backup_'+ds, json); } catch(e){}
+    }
+
+    // 同时显示备份文本在页面上（兜底方案）
+    showBackupText(json, ds);
+  }
+
+  function showBackupText(json, ds){
+    var overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;display:flex;align-items:center;justify-content:center;';
+    overlay.onclick = function(e){ if(e.target===overlay) document.body.removeChild(overlay); };
+    var box = document.createElement('div');
+    box.style.cssText = 'background:#fff;border-radius:16px;padding:20px;width:90%;max-width:400px;max-height:70vh;overflow:auto;';
+    box.innerHTML = '<div style="font-weight:700;font-size:18px;margin-bottom:12px;">备份已导出</div>'+
+      '<div style="font-size:13px;color:#666;margin-bottom:8px;">文件: reminders-backup-'+ds+'.json</div>'+
+      '<div style="font-size:13px;color:#666;margin-bottom:8px;">如果下载未开始，请复制下面的文本手动保存：</div>'+
+      '<textarea readonly style="width:100%;height:150px;font-size:11px;font-family:monospace;border:1px solid #ddd;border-radius:8px;padding:8px;resize:none;" onclick="this.select()">'+json.replace(/</g,'&lt;')+'</textarea>'+
+      '<button style="margin-top:10px;width:100%;padding:12px;background:#007aff;color:#fff;border:none;border-radius:10px;font-size:16px;cursor:pointer;" onclick="var ta=this.parentElement.querySelector(\'textarea\');navigator.clipboard.writeText(ta.value);this.textContent=\'已复制!\';setTimeout(function(){this.textContent=\'复制备份文本\'}.bind(this),1500)">复制备份文本</button>'+
+      '<button style="margin-top:8px;width:100%;padding:12px;background:#eee;border:none;border-radius:10px;font-size:16px;cursor:pointer;" onclick="this.closest(\'div\').parentElement.remove()">关闭</button>';
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
   }
 
   // 导入备份（读取文件）
