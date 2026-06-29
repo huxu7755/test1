@@ -45,7 +45,6 @@ jobs:
           cp -r css app/src/main/assets/
           cp -r js app/src/main/assets/
           cp manifest.json app/src/main/assets/
-          cp sw.js app/src/main/assets/
 
           cat > app/src/main/AndroidManifest.xml << 'MANIFEST'
           <?xml version="1.0" encoding="utf-8"?>

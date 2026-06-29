@@ -471,6 +471,7 @@ var App = (function(){
     window.saveSyncConfig = saveSyncConfig;
     window.syncNow = syncNow;
     window.importBackupFromText = importBackupFromText;
+    window.restoreRemindersData = restoreRemindersData;
   }
 
   // ── Settings ──
@@ -530,6 +531,17 @@ var App = (function(){
         render();
       }
     });
+  }
+
+  function restoreRemindersData(data){
+    D.reminders = data.reminders;
+    D.lists = data.lists;
+    render();
+  }
+
+  function importBackupFromText(){
+    // 委托给 BackupManager
+    BackupManager.importBackupFromText();
   }
 
   function syncNow(){
