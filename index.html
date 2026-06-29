@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>提醒事项</title>
+<style>
+:root {
+  --bg: #f2f2f7;
+  --card-bg: #ffffff;
+  --primary: #007aff;
+  --red: #ff3b30;
+  --orange: #ff9500;
+  --yellow: #ffcc00;
+  --green: #34c759;
+  --blue: #007aff;
+  --purple: #af52de;
+  --gray: #8e8e93;
+  --text: #1c1c1e;
+  --text-secondary: #6e6e73;
+  --separator: #e5e5ea;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --radius: 12px;
+  --transition: 0.25s ease;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+  display: flex;
+  justify-content: center;
+}
+.app-container {
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Header */
+.header {
+  padding: 12px 20px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.header-title {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text);
+}
+.header-actions {
+  display: flex;
+  gap: 16px;
+}
+.header-btn {
+  background: none;
+  border: none;
+  font-size: 17px;
+  color: var(--primary);
+  cursor: pointer;
+  font-family: var(--font);
+  font-weight: 500;
+  transition: opacity var(--transition);
+}
+.header-btn:hover { opacity: 0.7; }
+
+/* View Switcher */
+.view-switcher {
+  display: flex;
+  gap: 4px;
+  padding: 4px 20px 12px;
+  background: var(--bg);
+  position: sticky;
+  top: 56px;
+  z-index: 99;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+.view-tab {
+  flex: 1;
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition);
+  background: transparent;
+  border: none;
+  font-family: var(--font);
+}
+.view-tab.active {
+  background: rgba(0,122,255,0.12);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Search */
+.search-bar {
+  margin: 0 20px 12px;
+  display: flex;
+  align-items: center;
+  background: var(--card-bg);
+  border-radius: 10px;
+  padding: 10px 14px;
+  gap: 8px;
+  box-shadow: var(--shadow);
+}
+.search-bar svg {
+  flex-shrink: 0;
+  color: var(--gray);
+}
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  font-family: var(--font);
+  background: transparent;
+  color: var(--text);
+}
+.search-input::placeholder { color: #c7c7cc; }
+
+/* Category Tags */
+.category-tags {
+  padding: 4px 20px 12px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.category-tags::-webkit-scrollbar { display: none; }
+.category-tag {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--separator);
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.category-tag.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.category-tag .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+/* Reminder List */
+.reminder-list {
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.reminder-item {
+  display: flex;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  gap: 12px;
+  cursor: pointer;
+  transition: all var(--transition);
+  box-shadow: var(--shadow);
+  position: relative;
+}
+.reminder-item:active { transform: scale(0.985); }
+.reminder-item.completed { opacity: 0.6; }
+
+.check-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #c7c7cc;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+.check-circle.checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.check-circle.checked::after {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translateY(-1px);
+}
+.priority-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.priority-high { background: var(--red); }
+.priority-medium { background: var(--orange); }
+.reminder-content {
+  flex: 1;
+  min-width: 0;
+}
+.reminder-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text);
+}
+.reminder-item.completed .reminder-title {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+.reminder-meta {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.reminder-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(0,122,255,0.1);
+  color: var(--primary);
+}
+.reminder-flag {
+  color: var(--orange);
+  font-size: 13px;
+}
+.list-badge {
+  width: 6px;
+  height: 28px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* Floating Action Button */
+.fab {
+  position: fixed;
+  bottom: 32px;
+  right: calc(50% - 220px);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,122,255,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  transition: all var(--transition);
+  font-family: var(--font);
+}
+.fab:active { transform: scale(0.9); }
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--card-bg);
+  border-radius: 20px 20px 0 0;
+  padding: 8px 20px 34px;
+  max-height: 85vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-handle {
+  width: 36px;
+  height: 5px;
+  background: #d1d1d6;
+  border-radius: 3px;
+  margin: 0 auto 16px;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.modal-title {
+  font-size: 20px;
+  font-weight: 600;
+}
+.form-group {
+  margin-bottom: 16px;
+}
+.form-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 6px;
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.form-input, .form-textarea, .form-select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--separator);
+  border-radius: 10px;
+  font-size: 16px;
+  font-family: var(--font);
+  background: #f9f9f9;
+  color: var(--text);
+  outline: none;
+  transition: border-color var(--transition);
+}
+.form-input:focus, .form-textarea:focus { border-color: var(--primary); background: #fff; }
+.form-textarea { resize: none; min-height: 80px; }
+.form-row {
+  display: flex;
+  gap: 12px;
+}
+.form-row > * { flex: 1; }
+.form-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 4 3-4' fill='none' stroke='%238e8e93' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+.priority-toggle {
+  display: flex;
+  gap: 10px;
+}
+.priority-btn {
+  flex: 1;
+  padding: 10px;
+  border: 2px solid var(--separator);
+  border-radius: 10px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  background: transparent;
+  transition: all var(--transition);
+  font-family: var(--font);
+}
+.priority-btn.selected { border-color: var(--primary); background: rgba(0,122,255,0.06); }
+.priority-btn.important { border-color: var(--red); color: var(--red); }
+.priority-btn.important.selected { border-color: var(--red); background: rgba(255,59,48,0.08); }
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: opacity var(--transition);
+}
+.btn-primary:hover { opacity: 0.85; }
+.btn-danger {
+  background: transparent;
+  color: var(--red);
+  border: none;
+  font-size: 17px;
+  cursor: pointer;
+  font-family: var(--font);
+}
+
+/* Lists Panel */
+.lists-section {
+  margin: 16px 20px;
+}
+.lists-section-title {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.list-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  gap: 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  margin-bottom: 4px;
+  transition: all var(--transition);
+}
+.list-item:active { transform: scale(0.985); }
+.list-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #fff;
+  flex-shrink: 0;
+}
+.list-name { font-size: 16px; font-weight: 500; flex: 1; }
+.list-count { color: var(--text-secondary); font-size: 15px; }
+
+/* Calendar View */
+.calendar-container {
+  padding: 0 20px;
+}
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.calendar-month {
+  font-size: 20px;
+  font-weight: 600;
+}
+.calendar-nav {
+  display: flex;
+  gap: 8px;
+}
+.calendar-nav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--card-bg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: var(--primary);
+  box-shadow: var(--shadow);
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+.calendar-day-header {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  padding: 6px 0;
+}
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all var(--transition);
+  position: relative;
+  font-weight: 500;
+}
+.calendar-day:hover { background: rgba(0,122,255,0.08); }
+.calendar-day.today {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+.calendar-day.other-month { color: #c7c7cc; }
+.calendar-day.has-reminder::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.calendar-day.today.has-reminder::after {
+  background: #fff;
+}
+.calendar-selected-date {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.selected-date-label {
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+.empty-state svg {
+  margin-bottom: 16px;
+  opacity: 0.4;
+}
+.empty-state p { font-size: 16px; }
+
+/* Section header */
+.section-header {
+  font-size: 22px;
+  font-weight: 700;
+  padding: 8px 20px 8px;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+
+@media (max-width: 480px) {
+  .fab { right: 20px; }
+}
+</style>
+</head>
+<body>
+<div class="app-container" id="app">
+
+  <!-- Header -->
+  <div class="header">
+    <h1 class="header-title">提醒事项</h1>
+    <div class="header-actions">
+      <button class="header-btn" onclick="toggleCalendarView()" id="calendarBtn">日历</button>
+      <button class="header-btn" onclick="showNewListModal()">新建列表</button>
+    </div>
+  </div>
+
+  <!-- View Switcher -->
+  <div class="view-switcher" id="viewSwitcher">
+    <button class="view-tab active" onclick="switchView('today')" data-view="today">今天</button>
+    <button class="view-tab" onclick="switchView('all')" data-view="all">全部</button>
+    <button class="view-tab" onclick="switchView('completed')" data-view="completed">完成</button>
+  </div>
+
+  <!-- Search -->
+  <div class="search-bar">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" class="search-input" placeholder="搜索" oninput="filterReminders()" id="searchInput">
+  </div>
+
+  <!-- Calendar View -->
+  <div class="calendar-container" id="calendarView" style="display:none;"></div>
+
+  <!-- Category Tags -->
+  <div class="category-tags" id="categoryTags">
+    <div class="category-tag active" data-cat="all" onclick="filterByCategory('all', this)">
+      <span class="dot" style="background:var(--primary)"></span>全部
+    </div>
+    <div class="category-tag" data-cat="today" onclick="filterByCategory('today', this)">
+      <span class="dot" style="background:var(--green)"></span>今日待办
+    </div>
+    <div class="category-tag" data-cat="important" onclick="filterByCategory('important', this)">
+      <span class="dot" style="background:var(--red)"></span>重要且紧急
+    </div>
+    <div class="category-tag" data-cat="scheduled" onclick="filterByCategory('scheduled', this)">
+      <span class="dot" style="background:var(--orange)"></span>已计划
+    </div>
+    <div class="category-tag" data-cat="flagged" onclick="filterByCategory('flagged', this)">
+      <span class="dot" style="background:var(--yellow)"></span>旗标
+    </div>
+  </div>
+
+  <!-- Lists Section -->
+  <div class="lists-section" id="listsSection"></div>
+
+  <!-- Reminder List -->
+  <div class="reminder-list" id="reminderList"></div>
+
+  <!-- Empty State -->
+  <div class="empty-state" id="emptyState" style="display:none;">
+    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <p>没有待办事项</p>
+  </div>
+
+  <!-- FAB -->
+  <button class="fab" onclick="showNewReminderModal()" id="fab">+</button>
+</div>
+
+<!-- New Reminder Modal -->
+<div class="modal-overlay" id="reminderModal" style="display:none;" onclick="closeModalOutside(event, 'reminderModal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button class="btn-danger" onclick="closeModal('reminderModal')">取消</button>
+      <span class="modal-title" id="reminderModalTitle">新建提醒事项</span>
+      <button class="header-btn" onclick="saveReminder()">添加</button>
+    </div>
+    <div class="form-group">
+      <input type="text" class="form-input" placeholder="标题" id="reminderTitle">
+    </div>
+    <div class="form-group">
+      <label class="form-label">日期与时间</label>
+      <input type="datetime-local" class="form-input" id="reminderDateTime">
+    </div>
+    <div class="form-group">
+      <label class="form-label">地点</label>
+      <input type="text" class="form-input" placeholder="添加地点" id="reminderLocation">
+    </div>
+    <div class="form-group">
+      <label class="form-label">标签</label>
+      <div class="form-row">
+        <select class="form-select" id="reminderTag">
+          <option value="">无标签</option>
+          <option value="工作">工作</option>
+          <option value="个人">个人</option>
+          <option value="购物">购物</option>
+          <option value="健康">健康</option>
+          <option value="学习">学习</option>
+        </select>
+        <select class="form-select" id="reminderListSelect"></select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">优先级</label>
+      <div class="priority-toggle">
+        <div class="priority-btn" data-priority="none" onclick="selectPriority(this)">无</div>
+        <div class="priority-btn" data-priority="low" onclick="selectPriority(this)">低</div>
+        <div class="priority-btn" data-priority="medium" onclick="selectPriority(this)">中</div>
+        <div class="priority-btn important" data-priority="high" onclick="selectPriority(this)">重要</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">备注</label>
+      <textarea class="form-textarea" placeholder="备注..." id="reminderNotes"></textarea>
+    </div>
+    <button class="btn-primary" onclick="saveReminder()">添加提醒事项</button>
+    <input type="hidden" id="editingReminderId" value="">
+  </div>
+</div>
+
+<!-- New List Modal -->
+<div class="modal-overlay" id="listModal" style="display:none;" onclick="closeModalOutside(event, 'listModal')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <button class="btn-danger" onclick="closeModal('listModal')">取消</button>
+      <span class="modal-title" id="listModalTitle">新建列表</span>
+      <button class="header-btn" onclick="saveList()">完成</button>
+    </div>
+    <div class="form-group">
+      <input type="text" class="form-input" placeholder="列表名称" id="listName">
+    </div>
+    <div class="form-group">
+      <label class="form-label">列表类型</label>
+      <select class="form-select" id="listType">
+        <option value="standard">标准</option>
+        <option value="shopping">购物清单</option>
+        <option value="work">工作</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">颜色</label>
+      <div class="priority-toggle" id="colorPicker">
+        <div class="priority-btn" data-color="#007aff" style="background:rgba(0,122,255,0.1);border-color:#007aff;color:#007aff;" onclick="selectColor(this)">蓝</div>
+        <div class="priority-btn" data-color="#ff3b30" style="background:rgba(255,59,48,0.1);border-color:#ff3b30;color:#ff3b30;" onclick="selectColor(this)">红</div>
+        <div class="priority-btn" data-color="#34c759" style="background:rgba(52,199,89,0.1);border-color:#34c759;color:#34c759;" onclick="selectColor(this)">绿</div>
+        <div class="priority-btn" data-color="#ff9500" style="background:rgba(255,149,0,0.1);border-color:#ff9500;color:#ff9500;" onclick="selectColor(this)">橙</div>
+        <div class="priority-btn" data-color="#af52de" style="background:rgba(175,82,222,0.1);border-color:#af52de;color:#af52de;" onclick="selectColor(this)">紫</div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">图标</label>
+      <select class="form-select" id="listIcon">
+        <option value="📋">📋 列表</option>
+        <option value="🛒">🛒 购物</option>
+        <option value="💼">💼 工作</option>
+        <option value="🏠">🏠 家庭</option>
+        <option value="📚">📚 学习</option>
+        <option value="❤️">❤️ 健康</option>
+        <option value="⭐">⭐ 重要</option>
+        <option value="🎯">🎯 目标</option>
+      </select>
+    </div>
+    <button class="btn-primary" onclick="saveList()">创建列表</button>
+    <input type="hidden" id="editingListId" value="">
+  </div>
+</div>
+
+<script>
+// Data Store
+const STORAGE_KEY = 'reminders_app_data';
+let appData = {
+  reminders: [],
+  lists: [
+    { id: 'list_default', name: '提醒事项', type: 'standard', color: '#007aff', icon: '📋' },
+    { id: 'list_work', name: '工作', type: 'work', color: '#ff9500', icon: '💼' },
+    { id: 'list_shopping', name: '购物清单', type: 'shopping', color: '#34c759', icon: '🛒' },
+  ],
+  currentView: 'today',
+  currentCategory: 'all',
+  searchQuery: '',
+  selectedPriority: 'none',
+  selectedColor: '#007aff',
+  calendarMonth: null,
+  calendarYear: null,
+  showCalendar: false
+};
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) appData = JSON.parse(saved);
+  } catch(e) {}
+}
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+}
+
+// IDs
+function genId() { return 'r_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6); }
+function genListId() { return 'l_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6); }
+
+// Render
+function render() {
+  renderCalendarIfNeeded();
+  renderLists();
+  renderReminders();
+  saveData();
+}
+
+function renderLists() {
+  const container = document.getElementById('listsSection');
+  container.innerHTML = '<div class="section-header" style="font-size:20px;">我的列表</div>';
+  appData.lists.forEach(list => {
+    const count = appData.reminders.filter(r => r.listId === list.id && !r.completed).length;
+    container.innerHTML += `
+      <div class="list-item" onclick="filterByList('${list.id}')">
+        <div class="list-icon" style="background:${list.color}">${list.icon}</div>
+        <span class="list-name">${escapeHtml(list.name)}</span>
+        <span class="list-count">${count}</span>
+        <div style="cursor:pointer;color:var(--gray);font-size:18px;" onclick="event.stopPropagation();editList('${list.id}')">&#8942;</div>
+      </div>
+    `;
+  });
+}
+
+function getFilteredReminders() {
+  let list = [...appData.reminders];
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+
+  // View filter
+  if (appData.currentView === 'today') {
+    list = list.filter(r => !r.completed && r.date && r.date.startsWith(todayStr));
+  } else if (appData.currentView === 'completed') {
+    list = list.filter(r => r.completed);
+  } else {
+    list = list.filter(r => !r.completed);
+  }
+
+  // Category filter (when not in completed view)
+  if (appData.currentView !== 'completed') {
+    if (appData.currentCategory === 'today') {
+      list = list.filter(r => r.date && r.date.startsWith(todayStr));
+    } else if (appData.currentCategory === 'important') {
+      list = list.filter(r => r.priority === 'high');
+    } else if (appData.currentCategory === 'scheduled') {
+      list = list.filter(r => r.date);
+    } else if (appData.currentCategory === 'flagged') {
+      list = list.filter(r => r.flagged);
+    }
+  }
+
+  // Search
+  if (appData.searchQuery) {
+    const q = appData.searchQuery.toLowerCase();
+    list = list.filter(r =>
+      r.title.toLowerCase().includes(q) ||
+      (r.notes && r.notes.toLowerCase().includes(q)) ||
+      (r.location && r.location.toLowerCase().includes(q)) ||
+      (r.tag && r.tag.toLowerCase().includes(q))
+    );
+  }
+
+  return list;
+}
+
+function renderReminders() {
+  const container = document.getElementById('reminderList');
+  const emptyState = document.getElementById('emptyState');
+  const reminders = getFilteredReminders();
+  const listSelect = document.getElementById('reminderListSelect');
+
+  // Update list select options
+  listSelect.innerHTML = '';
+  appData.lists.forEach(l => {
+    listSelect.innerHTML += `<option value="${l.id}">${l.icon} ${l.name}</option>`;
+  });
+
+  if (reminders.length === 0) {
+    container.innerHTML = '';
+    emptyState.style.display = 'block';
+    return;
+  }
+  emptyState.style.display = 'none';
+
+  // Group by date for "all" view
+  let grouped = { '': [] };
+  if (appData.currentView === 'all' && appData.currentCategory === 'all') {
+    grouped = {};
+    reminders.forEach(r => {
+      const key = r.date ? r.date : '';
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(r);
+    });
+  } else {
+    grouped = { '': reminders };
+  }
+
+  container.innerHTML = '';
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  Object.keys(grouped).sort().reverse().forEach(dateKey => {
+    if (dateKey && grouped[dateKey].length > 0) {
+      let dateLabel = dateKey;
+      if (dateKey === todayStr) dateLabel = '今天';
+      else if (dateKey === getDateStr(1)) dateLabel = '明天';
+      container.innerHTML += `<div class="section-header" style="font-size:18px;">${dateLabel}</div>`;
+    }
+    grouped[dateKey].forEach(r => {
+      const list = appData.lists.find(l => l.id === r.listId);
+      const listColor = list ? list.color : '#007aff';
+      const priorityClass = r.priority === 'high' ? 'priority-high' : r.priority === 'medium' ? 'priority-medium' : '';
+      const checkedClass = r.completed ? 'checked' : '';
+      container.innerHTML += `
+        <div class="reminder-item ${r.completed ? 'completed' : ''}" onclick="toggleReminder('${r.id}')">
+          ${r.priority === 'high' ? `<span class="priority-dot priority-high" style="left:14px;"></span>` : ''}
+          <div class="list-badge" style="background:${listColor}; min-width:6px;"></div>
+          <div class="check-circle ${checkedClass}"></div>
+          <div class="reminder-content">
+            <div class="reminder-title">${escapeHtml(r.title)}</div>
+            <div class="reminder-meta">
+              ${r.date ? `<span>${formatDateTime(r.date, r.time)}</span>` : ''}
+              ${r.location ? `<span>📍 ${escapeHtml(r.location)}</span>` : ''}
+              ${r.tag ? `<span class="reminder-tag">${escapeHtml(r.tag)}</span>` : ''}
+              ${r.flagged ? '<span class="reminder-flag">🚩</span>' : ''}
+              ${r.notes ? '<span style="color:var(--gray);">📝</span>' : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    });
+  });
+}
+
+function getDateStr(offsetDays) {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toISOString().split('T')[0];
+}
+
+function formatDateTime(date, time) {
+  if (!date) return '';
+  const d = new Date(date + (time ? 'T' + time : 'T00:00'));
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  const tomorrow = getDateStr(1);
+  const yesterday = getDateStr(-1);
+  let prefix = '';
+  if (date === today) prefix = '今天';
+  else if (date === tomorrow) prefix = '明天';
+  else if (date === yesterday) prefix = '昨天';
+  else {
+    prefix = `${d.getMonth() + 1}月${d.getDate()}日`;
+  }
+  if (time) prefix += ` ${time.slice(0,5)}`;
+  return prefix;
+}
+
+// Actions
+function switchView(view) {
+  appData.currentView = view;
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`[data-view="${view}"]`).classList.add('active');
+  if (view === 'completed') {
+    document.getElementById('categoryTags').style.display = 'none';
+  } else {
+    document.getElementById('categoryTags').style.display = 'flex';
+  }
+  render();
+}
+
+function filterByCategory(cat, el) {
+  appData.currentCategory = cat;
+  document.querySelectorAll('.category-tag').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+  render();
+}
+
+function filterByList(listId) {
+  appData.currentView = 'all';
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  document.querySelector('[data-view="all"]').classList.add('active');
+  document.getElementById('categoryTags').style.display = 'flex';
+  appData.currentCategory = 'all';
+  document.querySelectorAll('.category-tag').forEach(t => t.classList.remove('active'));
+  document.querySelector('[data-cat="all"]').classList.add('active');
+  // Filter by list via search hack: store and use
+  appData._listFilter = listId;
+  render();
+  // Override getFilteredReminders temporarily
+  const orig = getFilteredReminders;
+  // We'll use a different approach: set a list filter in appData
+}
+
+// Override getFilteredReminders to include list filter
+const origGetFiltered = getFilteredReminders;
+getFilteredReminders = function() {
+  let list = origGetFiltered();
+  if (appData._listFilter) {
+    list = list.filter(r => r.listId === appData._listFilter);
+  }
+  return list;
+};
+
+function filterReminders() {
+  appData.searchQuery = document.getElementById('searchInput').value;
+  appData._listFilter = null;
+  render();
+}
+
+function toggleReminder(id) {
+  const r = appData.reminders.find(r => r.id === id);
+  if (r) {
+    r.completed = !r.completed;
+    if (r.completed) r.completedAt = new Date().toISOString();
+    else r.completedAt = null;
+    render();
+  }
+}
+
+function selectPriority(el) {
+  document.querySelectorAll('#reminderModal .priority-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  appData.selectedPriority = el.dataset.priority;
+}
+
+function selectColor(el) {
+  document.querySelectorAll('#colorPicker .priority-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  appData.selectedColor = el.dataset.color;
+}
+
+// Modals
+function showNewReminderModal() {
+  document.getElementById('reminderModalTitle').textContent = '新建提醒事项';
+  document.getElementById('reminderTitle').value = '';
+  document.getElementById('reminderDateTime').value = '';
+  document.getElementById('reminderLocation').value = '';
+  document.getElementById('reminderTag').value = '';
+  document.getElementById('reminderNotes').value = '';
+  document.getElementById('editingReminderId').value = '';
+  appData.selectedPriority = 'none';
+  document.querySelectorAll('#reminderModal .priority-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector('#reminderModal [data-priority="none"]').classList.add('selected');
+  document.getElementById('reminderModal').style.display = 'flex';
+  document.getElementById('fab').style.display = 'none';
+}
+
+function showNewListModal() {
+  document.getElementById('listModalTitle').textContent = '新建列表';
+  document.getElementById('listName').value = '';
+  document.getElementById('listType').value = 'standard';
+  document.getElementById('listIcon').value = '📋';
+  document.getElementById('editingListId').value = '';
+  appData.selectedColor = '#007aff';
+  document.querySelectorAll('#colorPicker .priority-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector('#colorPicker [data-color="#007aff"]').classList.add('selected');
+  document.getElementById('listModal').style.display = 'flex';
+}
+
+function editList(id) {
+  const list = appData.lists.find(l => l.id === id);
+  if (!list) return;
+  document.getElementById('listModalTitle').textContent = '编辑列表';
+  document.getElementById('listName').value = list.name;
+  document.getElementById('listType').value = list.type;
+  document.getElementById('listIcon').value = list.icon;
+  document.getElementById('editingListId').value = id;
+  appData.selectedColor = list.color;
+  document.querySelectorAll('#colorPicker .priority-btn').forEach(b => {
+    b.classList.remove('selected');
+    if (b.dataset.color === list.color) b.classList.add('selected');
+  });
+  document.getElementById('listModal').style.display = 'flex';
+}
+
+function closeModal(id) {
+  document.getElementById(id).style.display = 'none';
+  document.getElementById('fab').style.display = 'flex';
+}
+
+function closeModalOutside(e, id) {
+  if (e.target === document.getElementById(id)) closeModal(id);
+}
+
+function saveReminder() {
+  const title = document.getElementById('reminderTitle').value.trim();
+  if (!title) { alert('请输入标题'); return; }
+  const dateTime = document.getElementById('reminderDateTime').value;
+  const date = dateTime ? dateTime.split('T')[0] : '';
+  const time = dateTime ? dateTime.split('T')[1] : '';
+  const location = document.getElementById('reminderLocation').value.trim();
+  const tag = document.getElementById('reminderTag').value;
+  const notes = document.getElementById('reminderNotes').value.trim();
+  const listId = document.getElementById('reminderListSelect').value || 'list_default';
+  const editingId = document.getElementById('editingReminderId').value;
+
+  const reminder = {
+    id: editingId || genId(),
+    title,
+    date,
+    time,
+    location,
+    tag,
+    notes,
+    priority: appData.selectedPriority,
+    listId,
+    flagged: false,
+    completed: false,
+    createdAt: editingId ? (appData.reminders.find(r => r.id === editingId)?.createdAt || new Date().toISOString()) : new Date().toISOString()
+  };
+
+  if (editingId) {
+    const idx = appData.reminders.findIndex(r => r.id === editingId);
+    if (idx >= 0) appData.reminders[idx] = reminder;
+  } else {
+    appData.reminders.unshift(reminder);
+  }
+
+  closeModal('reminderModal');
+  render();
+}
+
+function saveList() {
+  const name = document.getElementById('listName').value.trim();
+  if (!name) { alert('请输入列表名称'); return; }
+  const type = document.getElementById('listType').value;
+  const icon = document.getElementById('listIcon').value;
+  const editingId = document.getElementById('editingListId').value;
+
+  const list = {
+    id: editingId || genListId(),
+    name,
+    type,
+    color: appData.selectedColor,
+    icon
+  };
+
+  if (editingId) {
+    const idx = appData.lists.findIndex(l => l.id === editingId);
+    if (idx >= 0) appData.lists[idx] = list;
+  } else {
+    appData.lists.push(list);
+  }
+
+  closeModal('listModal');
+  render();
+}
+
+// Calendar
+function toggleCalendarView() {
+  appData.showCalendar = !appData.showCalendar;
+  document.getElementById('calendarBtn').textContent = appData.showCalendar ? '列表' : '日历';
+  document.getElementById('calendarView').style.display = appData.showCalendar ? 'block' : 'none';
+  document.getElementById('viewSwitcher').style.display = appData.showCalendar ? 'none' : 'flex';
+  document.getElementById('categoryTags').style.display = appData.showCalendar ? 'none' : 'flex';
+  document.getElementById('reminderList').style.display = appData.showCalendar ? 'none' : '';
+  document.getElementById('listsSection').style.display = appData.showCalendar ? 'none' : '';
+  document.getElementById('searchInput').parentElement.style.display = appData.showCalendar ? 'none' : 'flex';
+  document.getElementById('emptyState').style.display = 'none';
+  if (appData.showCalendar) renderCalendar();
+}
+
+function renderCalendarIfNeeded() {
+  if (appData.showCalendar) renderCalendar();
+}
+
+function renderCalendar() {
+  const now = new Date();
+  if (!appData.calendarMonth) appData.calendarMonth = now.getMonth();
+  if (!appData.calendarYear) appData.calendarYear = now.getFullYear();
+
+  const year = appData.calendarYear;
+  const month = appData.calendarMonth;
+  const today = now.getDate();
+  const todayMonth = now.getMonth();
+  const todayYear = now.getFullYear();
+
+  const monthNames = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+  const dayHeaders = ['日','一','二','三','四','五','六'];
+
+  // Collect dates with reminders
+  const reminderDates = new Set();
+  appData.reminders.filter(r => r.date && !r.completed).forEach(r => reminderDates.add(r.date));
+
+  let html = `
+    <div class="calendar-header">
+      <span class="calendar-month">${year}年 ${monthNames[month]}</span>
+      <div class="calendar-nav">
+        <button class="calendar-nav-btn" onclick="navigateCalendar(-1)">◀</button>
+        <button class="calendar-nav-btn" onclick="navigateCalendar(1)">▶</button>
+      </div>
+    </div>
+    <div class="calendar-grid">
+  `;
+  dayHeaders.forEach(d => { html += `<div class="calendar-day-header">${d}</div>`; });
+
+  // Prev month days
+  const startDay = firstDay === 0 ? 7 : firstDay;
+  for (let i = startDay - 1; i >= 1; i--) {
+    html += `<div class="calendar-day other-month">${daysInPrevMonth - i + 1}</div>`;
+  }
+  for (let i = 0; i < 7 - startDay + 1 && daysInPrevMonth - startDay + 2 + i <= daysInPrevMonth; i++) {
+    // already handled above
+  }
+  // Refined approach
+  html = `
+    <div class="calendar-header">
+      <span class="calendar-month">${year}年 ${monthNames[month]}</span>
+      <div class="calendar-nav">
+        <button class="calendar-nav-btn" onclick="navigateCalendar(-1)">◀</button>
+        <button class="calendar-nav-btn" onclick="navigateCalendar(1)">▶</button>
+      </div>
+    </div>
+    <div class="calendar-grid">
+  `;
+  dayHeaders.forEach(d => { html += `<div class="calendar-day-header">${d}</div>`; });
+
+  // Calculate proper start day (Sunday = 0)
+  const adjustedStartDay = firstDay;
+  for (let i = 0; i < adjustedStartDay; i++) {
+    const d = daysInPrevMonth - adjustedStartDay + i + 1;
+    html += `<div class="calendar-day other-month">${d}</div>`;
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = (d === today && month === todayMonth && year === todayYear);
+    const hasReminder = reminderDates.has(dateStr);
+    const cls = ['calendar-day'];
+    if (isToday) cls.push('today');
+    if (hasReminder) cls.push('has-reminder');
+    html += `<div class="${cls.join(' ')}" onclick="showDateReminders('${dateStr}')">${d}</div>`;
+  }
+  const totalCells = adjustedStartDay + daysInMonth;
+  const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+  for (let i = 1; i <= remaining; i++) {
+    html += `<div class="calendar-day other-month">${i}</div>`;
+  }
+  html += '</div>';
+
+  document.getElementById('calendarView').innerHTML = html;
+}
+
+function navigateCalendar(dir) {
+  appData.calendarMonth += dir;
+  if (appData.calendarMonth > 11) { appData.calendarMonth = 0; appData.calendarYear++; }
+  if (appData.calendarMonth < 0) { appData.calendarMonth = 11; appData.calendarYear--; }
+  renderCalendar();
+}
+
+function showDateReminders(dateStr) {
+  const reminders = appData.reminders.filter(r => r.date === dateStr && !r.completed);
+  const container = document.getElementById('calendarView');
+  const existing = container.querySelector('.calendar-selected-date');
+  if (existing) existing.remove();
+
+  let html = `<div class="calendar-selected-date"><div class="selected-date-label">${dateStr} 的提醒事项</div>`;
+  if (reminders.length === 0) {
+    html += '<p style="color:var(--text-secondary);font-size:14px;">暂无提醒事项</p>';
+  } else {
+    reminders.forEach(r => {
+      html += `
+        <div class="reminder-item" style="margin-bottom:4px;border-radius:10px;" onclick="toggleReminder('${r.id}')">
+          <div class="check-circle ${r.completed ? 'checked' : ''}"></div>
+          <div class="reminder-content">
+            <div class="reminder-title">${escapeHtml(r.title)}</div>
+            <div class="reminder-meta">${r.time ? r.time.slice(0,5) : ''} ${r.tag ? '· '+escapeHtml(r.tag) : ''}</div>
+          </div>
+        </div>
+      `;
+    });
+  }
+  html += '</div>';
+  container.insertAdjacentHTML('beforeend', html);
+}
+
+// Utilities
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// Init
+loadData();
+render();
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+    e.preventDefault();
+    showNewReminderModal();
+  }
+});
+</script>
+</body>
+</html>
