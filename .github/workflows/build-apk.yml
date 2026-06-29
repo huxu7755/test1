@@ -212,11 +212,11 @@ jobs:
           echo "sdk.dir=$ANDROID_HOME" > local.properties
 
       - name: Build APK
-        run: gradle assembleRelease --no-daemon
+        run: gradle assembleDebug --no-daemon
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: reminders-app
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
