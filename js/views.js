@@ -13,7 +13,7 @@ var ReminderView = (function(){
   }
 
   function updateHeader(){
-    var total = D.reminders.filter(function(r){ return !r.deleted && !r.completed; }).length;
+    var total = D.reminders.filter(function(r){ return !r.deleted; }).length;
     document.getElementById('headerCount').textContent = total ? '('+total+')' : '';
   }
 
@@ -24,7 +24,7 @@ var ReminderView = (function(){
     var ts = ReminderManager.todayStr();
     var todayC = D.reminders.filter(function(r){ return !r.deleted && !r.completed && r.date===ts; }).length;
     var scheduledC = D.reminders.filter(function(r){ return !r.deleted && !r.completed && r.date; }).length;
-    var allC = D.reminders.filter(function(r){ return !r.deleted && !r.completed; }).length;
+    var allC = D.reminders.filter(function(r){ return !r.deleted; }).length;
     var flaggedC = D.reminders.filter(function(r){ return !r.deleted && !r.completed && r.flagged; }).length;
     var completedC = D.reminders.filter(function(r){ return r.completed && !r.deleted; }).length;
 
@@ -84,7 +84,7 @@ var ReminderView = (function(){
     var el = document.getElementById('listsSection');
     var html = '';
     D.lists.forEach(function(l){
-      var cnt = D.reminders.filter(function(r){ return r.listId===l.id && !r.completed && !r.deleted; }).length;
+      var cnt = D.reminders.filter(function(r){ return r.listId===l.id && !r.deleted; }).length;
       html += '<div class="list-item-w" id="listItem-'+l.id+'">'+
         '<div class="list-swipe-bg"><span class="swipe-btn-edit" onclick="event.stopPropagation();editList(\''+l.id+'\')">编辑</span><span class="swipe-btn-del" onclick="event.stopPropagation();deleteListConfirm(\''+l.id+'\')">删除</span></div>'+
         '<div class="list-item-inner" onclick="filterByList(\''+l.id+'\')">'+
@@ -100,6 +100,12 @@ var ReminderView = (function(){
     // Update list select in modal
     var sel = document.getElementById('rList');
     if(sel) sel.innerHTML = D.lists.map(function(l){ return '<option value="'+l.id+'">'+l.icon+' '+l.name+'</option>'; }).join('');
+    // Update recent delete count
+    var delCount = D.reminders.filter(function(r){ return r.deleted; }).length;
+    var rdEl = document.getElementById('recentDeleteCount');
+    if(rdEl) rdEl.textContent = delCount > 0 ? delCount : '';
+    var rd = document.getElementById('recentDelete');
+    if(rd) { if(delCount > 0) rd.classList.remove('hidden'); else rd.classList.add('hidden'); }
   }
 
   function bindListSwipe(el){
