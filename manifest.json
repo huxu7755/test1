@@ -1,20 +1,20 @@
 {
-  "name": "提醒事项",
-  "short_name": "提醒事项",
-  "description": "一款简洁高效的 iOS 风格提醒事项应用",
+  "name": "Reminders",
+  "short_name": "Reminders",
+  "description": "iOS-style Reminders app clone",
   "start_url": "index.html",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#f2f2f7",
-  "theme_color": "#007aff",
+  "theme_color": "#f2f2f7",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "img/icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "icon-512.png",
+      "src": "img/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }

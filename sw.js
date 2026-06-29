@@ -1,11 +1,8 @@
-/* sw.js — Service Worker 离线缓存 */
-'use strict';
-
-const CACHE_NAME = 'reminders-v2';
-
+const CACHE_NAME = 'reminders-v1';
 const ASSETS = [
   '/',
   'index.html',
+  'manifest.json',
   'css/style.css',
   'js/storage.js',
   'js/lists.js',
@@ -14,35 +11,34 @@ const ASSETS = [
   'js/backup.js',
   'js/sync.js',
   'js/views.js',
-  'js/app.js',
-  'manifest.json'
+  'js/app.js'
 ];
 
-self.addEventListener('install', function(event) {
+self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(function(cache) {
-      return cache.addAll(ASSETS);
-    }).catch(function(err) {
-      console.warn('SW install cache error:', err);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
 });
 
-self.addEventListener('activate', function(event) {
-  event.waitUntil(
-    caches.keys().then(function(names) {
-      return Promise.all(
-        names.filter(function(n) { return n !== CACHE_NAME; })
-             .map(function(n) { return caches.delete(n); })
-      );
-    })
-  );
-});
-
-self.addEventListener('fetch', function(event) {
+self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then(function(resp) {
-      return resp || fetch(event.request);
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request).then((fetchResponse) => {
+        return caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, fetchResponse.clone());
+          return fetchResponse;
+        });
+      });
+    })
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      );
     })
   );
 });

@@ -1,167 +1,189 @@
-/* reminders.js — 提醒事项 CRUD 操作 */
-'use strict';
+/* reminders.js - Reminder CRUD operations */
 
-var ReminderManager = (function(){
-  function uid(){ return 'r'+Date.now()+Math.random().toString(36).slice(2,8); }
-  function todayStr(){ return new Date().toISOString().split('T')[0]; }
-  function getDateStr(off){
-    var d = new Date(); d.setDate(d.getDate() + off);
-    return d.toISOString().split('T')[0];
-  }
-  function fmtDate(date, time){
-    if(!date) return '';
-    var d = new Date(date + (time ? 'T'+time : 'T00:00'));
-    var ts = todayStr();
-    var pre = '';
-    if(date === ts) pre = '今天';
-    else if(date === getDateStr(1)) pre = '明天';
-    else if(date === getDateStr(-1)) pre = '昨天';
-    else pre = (d.getMonth()+1) + '月' + d.getDate() + '日';
-    if(time) pre += ' ' + time.slice(0,5);
-    return pre;
+const ReminderManager = (() => {
+  function getReminders(listId) {
+    const data = Storage.load();
+    const reminders = listId
+      ? data.reminders.filter(r => r.listId === listId && !r.completed)
+      : data.reminders.filter(r => !r.completed);
+    return reminders.sort((a, b) => a.order - b.order);
   }
 
-  function getFiltered(D){
-    if(D.view === 'deleted') {
-      var deleted = D.reminders.filter(function(r){ return r.deleted; });
-      return sortRemindersInternal(deleted, D.sortBy);
-    }
-    var list = D.reminders.slice().filter(function(r){ return !r.deleted; });
-    var ts = todayStr();
-    if(D.view === 'today') list = list.filter(function(r){ return !r.completed && r.date === ts; });
-    else if(D.view === 'scheduled') list = list.filter(function(r){ return !r.completed && r.date; });
-    else if(D.view === 'completed') list = list.filter(function(r){ return r.completed; });
-    else if(D.view === 'flagged') list = list.filter(function(r){ return !r.completed && r.flagged; });
-    else list = list.filter(function(r){ return !r.completed; });
-    if(D.view !== 'completed'){
-      if(D.cat === 'today') list = list.filter(function(r){ return r.date === ts; });
-      else if(D.cat === 'important') list = list.filter(function(r){ return r.priority === 'high'; });
-      else if(D.cat === 'flagged') list = list.filter(function(r){ return r.flagged; });
-    }
-    if(D.tagFilter) list = list.filter(function(r){ return r.tag === D.tagFilter; });
-    if(D.listFilterId) list = list.filter(function(r){ return r.listId === D.listFilterId; });
-    if(D.search){
-      var q = D.search.toLowerCase();
-      list = list.filter(function(r){
-        return r.title.toLowerCase().indexOf(q) !== -1
-          || ((r.notes||'').toLowerCase().indexOf(q) !== -1)
-          || ((r.location||'').toLowerCase().indexOf(q) !== -1)
-          || ((r.tag||'').toLowerCase().indexOf(q) !== -1);
-      });
-    }
-    return sortRemindersInternal(list, D.sortBy);
+  function getReminder(id) {
+    const data = Storage.load();
+    return data.reminders.find(r => r.id === id) || null;
   }
 
-  function sortRemindersInternal(list, sortBy){
-    if(!sortBy || sortBy === 'manual') return list;
-    if(sortBy === 'date'){
-      return list.sort(function(a,b){
-        if(!a.date && !b.date) return 0;
-        if(!a.date) return 1; if(!b.date) return -1;
-        var da = a.date+(a.time||''), db = b.date+(b.time||'');
-        return da.localeCompare(db);
-      });
-    }
-    if(sortBy === 'priority'){
-      var order = {high:0, medium:1, low:2, none:3};
-      return list.sort(function(a,b){
-        return (order[a.priority||'none']||3) - (order[b.priority||'none']||3);
-      });
-    }
-    if(sortBy === 'created'){
-      return list.sort(function(a,b){ return (b.createdAt||'').localeCompare(a.createdAt||''); });
-    }
-    return list;
-  }
-
-  function saveReminder(D, formData){
-    var title = formData.title;
-    if(!title) return false;
-    var dt = formData.dateTime;
-    var date = dt ? dt.split('T')[0] : '';
-    var time = dt ? dt.split('T')[1] : '';
-    var editId = formData.editId;
-    var existing = editId ? D.reminders.find(function(r){ return r.id===editId; }) : null;
-    var rem = {
-      id: editId || uid(),
-      title: title,
-      date: date,
-      time: time,
-      location: formData.location,
-      tag: formData.tag,
-      notes: formData.notes,
-      flagged: formData.flagged,
-      messageReminder: formData.messageReminder,
-      priority: formData.priority,
-      listId: formData.listId,
-      completed: existing ? existing.completed : false,
-      deleted: existing ? existing.deleted : false,
-      deletedAt: existing ? existing.deletedAt : null,
-      image: formData.imageRemoved ? null : (formData.image || (existing ? existing.image : null)),
-      createdAt: existing ? existing.createdAt || new Date().toISOString() : new Date().toISOString()
+  function createReminder(listId, title) {
+    const data = Storage.load();
+    const reminders = data.reminders.filter(r => r.listId === listId);
+    const reminder = {
+      id: Storage.generateId('rem'),
+      listId,
+      title: title || 'New Reminder',
+      notes: '',
+      url: '',
+      dueDate: '',
+      dueTime: '',
+      isFlagged: false,
+      priority: 0, /* 0=none, 1=low, 2=medium, 3=high */
+      tags: [],
+      image: null,
+      hasLocation: false,
+      hasMessaging: false,
+      completed: false,
+      completedAt: null,
+      createdAt: Date.now(),
+      order: reminders.length
     };
-    if(editId){
-      var idx = D.reminders.findIndex(function(r){ return r.id === editId; });
-      if(idx >= 0) D.reminders[idx] = rem;
-    } else {
-      D.reminders.unshift(rem);
-    }
+    data.reminders.push(reminder);
+    Storage.save(data);
+    return reminder;
+  }
+
+  function updateReminder(id, updates) {
+    const data = Storage.load();
+    const reminder = data.reminders.find(r => r.id === id);
+    if (!reminder) return null;
+    Object.assign(reminder, updates);
+    if (updates.completed === true) reminder.completedAt = Date.now();
+    if (updates.completed === false) reminder.completedAt = null;
+    Storage.save(data);
+    return reminder;
+  }
+
+  function toggleComplete(id) {
+    const r = getReminder(id);
+    if (!r) return null;
+    return updateReminder(id, { completed: !r.completed, completedAt: r.completed ? null : Date.now() });
+  }
+
+  function toggleFlag(id) {
+    const r = getReminder(id);
+    if (!r) return null;
+    return updateReminder(id, { isFlagged: !r.isFlagged });
+  }
+
+  function deleteReminder(id) {
+    const data = Storage.load();
+    const reminder = data.reminders.find(r => r.id === id);
+    if (!reminder) return false;
+    Storage.moveToTrash(reminder);
+    data.reminders = data.reminders.filter(r => r.id !== id);
+    Storage.save(data);
     return true;
   }
 
-  function toggleComplete(D, id){
-    var r = D.reminders.find(function(r){ return r.id === id; });
-    if(r){ r.completed = !r.completed; r.completedAt = r.completed ? new Date().toISOString() : null; }
+  function getTodaysReminders() {
+    const today = new Date().toISOString().split('T')[0];
+    const data = Storage.load();
+    return data.reminders.filter(r => r.dueDate === today && !r.completed)
+      .sort((a, b) => (a.dueTime || '').localeCompare(b.dueTime || ''));
   }
 
-  function softDelete(D, id){
-    var r = D.reminders.find(function(r){ return r.id === id; });
-    if(r){ r.deleted = true; r.deletedAt = new Date().toISOString(); }
+  function getScheduledReminders() {
+    const data = Storage.load();
+    return data.reminders.filter(r => r.dueDate && !r.completed)
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || (a.dueTime || '').localeCompare(b.dueTime || ''));
   }
 
-  function restore(D, id){
-    var r = D.reminders.find(function(r){ return r.id === id; });
-    if(r){ r.deleted = false; r.deletedAt = null; }
+  function getAllReminders() {
+    const data = Storage.load();
+    return data.reminders.filter(r => !r.completed).sort((a, b) => a.order - b.order);
   }
 
-  function permanentlyDelete(D, id){
-    var idx = D.reminders.findIndex(function(r){ return r.id === id; });
-    if(idx >= 0) D.reminders.splice(idx, 1);
+  function getFlaggedReminders() {
+    const data = Storage.load();
+    return data.reminders.filter(r => r.isFlagged && !r.completed)
+      .sort((a, b) => a.order - b.order);
   }
 
-  function cleanExpiredDeleted(D){
-    var cutoff = Date.now() - 30*24*60*60*1000;
-    D.reminders = D.reminders.filter(function(r){
-      if(!r.deleted) return true;
-      if(!r.deletedAt) return true;
-      return new Date(r.deletedAt).getTime() > cutoff;
+  function getCompletedReminders(listId) {
+    const data = Storage.load();
+    return (listId
+      ? data.reminders.filter(r => r.listId === listId && r.completed)
+      : data.reminders.filter(r => r.completed)
+    ).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+  }
+
+  function getRemindersByDate(dateStr) {
+    const data = Storage.load();
+    return data.reminders.filter(r => r.dueDate === dateStr);
+  }
+
+  function searchReminders(query, listId) {
+    const q = query.toLowerCase();
+    const data = Storage.load();
+    let results = data.reminders;
+    if (listId) results = results.filter(r => r.listId === listId);
+    return results.filter(r => {
+      return r.title.toLowerCase().includes(q) ||
+        r.notes.toLowerCase().includes(q) ||
+        r.url.toLowerCase().includes(q) ||
+        r.tags.some(t => t.toLowerCase().includes(q));
     });
   }
 
-  function getDeletedReminders(D){
-    return D.reminders.filter(function(r){ return r.deleted; });
+  function filterReminders(listId, filters) {
+    let reminders = getReminders(listId);
+    if (filters.search) {
+      reminders = searchReminders(filters.search, listId);
+    }
+    if (filters.priority !== undefined && filters.priority !== '') {
+      reminders = reminders.filter(r => r.priority === parseInt(filters.priority));
+    }
+    if (filters.flagged) {
+      reminders = reminders.filter(r => r.isFlagged);
+    }
+    if (filters.tag) {
+      reminders = reminders.filter(r => r.tags.includes(filters.tag));
+    }
+    if (filters.dateFrom) {
+      reminders = reminders.filter(r => r.dueDate >= filters.dateFrom);
+    }
+    return reminders;
   }
 
-  function getDaysUntilClean(deletedAt){
-    if(!deletedAt) return 30;
-    var elapsed = Date.now() - new Date(deletedAt).getTime();
-    var remaining = Math.max(0, 30 - Math.floor(elapsed / (24*60*60*1000)));
-    return remaining;
+  function getAllTags() {
+    const data = Storage.load();
+    const tagSet = new Set();
+    data.reminders.forEach(r => r.tags.forEach(t => tagSet.add(t)));
+    return Array.from(tagSet).sort();
   }
 
-  function getAllTags(D){
-    var tags = {};
-    D.reminders.forEach(function(r){
-      if(!r.deleted && r.tag) tags[r.tag] = (tags[r.tag]||0)+1;
-    });
-    return tags;
+  function getRecentlyDeleted() {
+    const trash = Storage.getTrash();
+    const now = Date.now();
+    return trash.filter(item => (now - item.deletedAt) < (30 * 24 * 60 * 60 * 1000));
+  }
+
+  function restoreReminder(id) {
+    const restored = Storage.restoreFromTrash(id);
+    if (!restored) return null;
+    const data = Storage.load();
+    const { deletedAt, ...clean } = restored;
+    data.reminders.push(clean);
+    Storage.save(data);
+    return clean;
+  }
+
+  function clearCompleted(listId) {
+    const data = Storage.load();
+    const completed = listId
+      ? data.reminders.filter(r => r.listId === listId && r.completed)
+      : data.reminders.filter(r => r.completed);
+    completed.forEach(r => Storage.moveToTrash(r));
+    data.reminders = data.reminders.filter(r => !completed.includes(r));
+    Storage.save(data);
+    return completed.length;
   }
 
   return {
-    uid: uid, todayStr: todayStr, getDateStr: getDateStr, fmtDate: fmtDate,
-    getFiltered: getFiltered, saveReminder: saveReminder, toggleComplete: toggleComplete,
-    softDelete: softDelete, restore: restore, permanentlyDelete: permanentlyDelete,
-    cleanExpiredDeleted: cleanExpiredDeleted, getDeletedReminders: getDeletedReminders,
-    getDaysUntilClean: getDaysUntilClean, getAllTags: getAllTags
+    getReminders, getReminder, createReminder, updateReminder,
+    toggleComplete, toggleFlag, deleteReminder,
+    getTodaysReminders, getScheduledReminders, getAllReminders,
+    getFlaggedReminders, getCompletedReminders, getRemindersByDate,
+    searchReminders, filterReminders, getAllTags,
+    getRecentlyDeleted, restoreReminder, clearCompleted
   };
 })();

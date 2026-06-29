@@ -1,306 +1,60 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#f2f2f7">
-<title>提醒事项</title>
-<link rel="manifest" href="manifest.json">
-<link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#f2f2f7">
+  <title>Reminders</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <div id="app">
+    <!-- Sidebar -->
+    <nav id="sidebar"></nav>
 
-<div id="app">
+    <!-- Main Content -->
+    <main id="main-content">
+      <div id="main-header"></div>
 
-<!-- 顶部导航 -->
-<header id="mainHeader">
-  <div class="header-row">
-    <div class="header-left">
-      <h1 class="app-title" onclick="switchView('today')">提醒事项 <span id="headerCount"></span></h1>
-    </div>
-    <div class="header-right">
-      <button class="icon-btn" onclick="showMoreMenu()" id="moreBtn">⋯</button>
-    </div>
+      <!-- Calendar -->
+      <section id="calendar-section"></section>
+
+      <!-- Toolbar -->
+      <div id="toolbar"></div>
+
+      <!-- Reminder List -->
+      <div id="reminder-list"></div>
+
+      <!-- Quick Add -->
+      <div id="quick-add"></div>
+    </main>
+
+    <!-- Detail Panel -->
+    <aside id="detail-panel"></aside>
+
+    <!-- Settings Panel -->
+    <aside id="settings-panel"></aside>
+
+    <!-- Modal Overlay -->
+    <div id="modal-overlay"></div>
   </div>
 
-  <!-- 更多菜单 -->
-  <div id="moreMenu" class="more-menu hidden">
-    <button class="more-menu-item" onclick="sortReminders('manual')">手动排序</button>
-    <button class="more-menu-item" onclick="sortReminders('date')">按日期排序</button>
-    <button class="more-menu-item" onclick="sortReminders('priority')">按优先级排序</button>
-    <button class="more-menu-item" onclick="sortReminders('created')">按创建时间排序</button>
-    <hr style="margin:4px 0;border-color:rgba(0,0,0,0.1)">
-    <button class="more-menu-item" onclick="showDeleteView()">最近删除</button>
-    <button class="more-menu-item" onclick="showSettings()">设置</button>
-  </div>
-</header>
+  <script src="js/storage.js"></script>
+  <script src="js/lists.js"></script>
+  <script src="js/reminders.js"></script>
+  <script src="js/calendar.js"></script>
+  <script src="js/backup.js"></script>
+  <script src="js/sync.js"></script>
+  <script src="js/views.js"></script>
+  <script src="js/app.js"></script>
 
-<!-- 分类标签 -->
-<div id="categoryTags" class="cat-tags">
-  <span class="cat-tag active" data-cat="all" onclick="filterByCategory('all',this)">全部</span>
-  <span class="cat-tag" data-cat="today" onclick="filterByCategory('today',this)">今天</span>
-  <span class="cat-tag" data-cat="important" onclick="filterByCategory('important',this)">重要</span>
-  <span class="cat-tag" data-cat="flagged" onclick="filterByCategory('flagged',this)">旗标</span>
-</div>
-
-<!-- 搜索 -->
-<div id="searchWrap" class="search-wrap">
-  <input type="text" id="searchInput" class="search-input" placeholder="搜索提醒事项..." oninput="onSearch()">
-  <button id="calToggleBtn" class="icon-btn cal-toggle" onclick="toggleCalendar()">日历</button>
-</div>
-
-<!-- 日历面板 -->
-<div id="calendarPanel" class="calendar-panel hidden"></div>
-
-<!-- 快捷卡片 -->
-<div id="quickCards" class="quick-cards"></div>
-
-<!-- 标签筛选 -->
-<div id="tagFilters" class="tag-filters hidden"></div>
-
-<!-- 建议列表 -->
-<div id="suggestList" class="suggest-list"></div>
-
-<!-- 提醒事项列表 -->
-<main class="list-main" id="reminderList"></main>
-<div id="emptyState" class="empty-state hidden">
-  <div class="empty-state-icon">📋</div>
-  <div class="empty-state-title">暂无提醒事项</div>
-</div>
-
-<!-- 列表区域 -->
-<section id="listsSection" class="lists-section">
-  <!-- 动态渲染 -->
-</section>
-
-<!-- Widget卡片 -->
-<div id="widgetCard" class="widget-card hidden">
-  <div class="widget-card-title">今日提醒</div>
-  <div id="widgetContent" class="widget-card-content"></div>
-  <div id="widgetFooter" class="widget-card-footer"></div>
-</div>
-
-<!-- 最近删除入口 -->
-<div id="recentDelete" class="list-entry hidden" onclick="showDeleteView()">
-  <span class="list-entry-icon">🗑️</span>
-  <span class="list-entry-label">最近删除</span>
-  <span class="list-entry-badge" id="recentDeleteCount"></span>
-  <span class="list-entry-arrow">&gt;</span>
-</div>
-
-<!-- 已完成入口 -->
-<div id="completedEntry" class="list-entry hidden" onclick="switchView('completed')">
-  <span class="list-entry-icon">✅</span>
-  <span class="list-entry-label">已完成</span>
-  <span class="list-entry-badge" id="completedEntryCount"></span>
-  <span class="list-entry-arrow">&gt;</span>
-</div>
-
-<!-- FAB -->
-<button id="fab" class="fab" onclick="showNewReminderModal()">+</button>
-
-</div><!-- #app -->
-
-<!-- ===== 提醒事项模态框 ===== -->
-<div id="reminderModal" class="modal-overlay hidden" onclick="closeModalOutside(event,'reminderModal')">
-  <div class="modal-sheet" onclick="event.stopPropagation()">
-    <div class="modal-header">
-      <button class="modal-btn-cancel" onclick="closeModal('reminderModal')">取消</button>
-      <span id="reminderModalTitle" class="modal-title">新建提醒事项</span>
-      <button class="modal-btn-save" onclick="saveReminder()">存储</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="rEditId" value="">
-      <div class="form-group">
-        <input type="text" id="rTitle" class="form-input form-input-title" placeholder="标题">
-      </div>
-      <div class="form-group form-row" onclick="focusField('rDateTime')">
-        <label class="form-label">日期时间</label>
-        <input type="datetime-local" id="rDateTime" class="form-input form-input-inline">
-      </div>
-      <div class="form-group">
-        <div class="form-row-split">
-          <label class="form-label">位置提醒</label>
-          <label class="switch"><input type="checkbox" id="rLocationToggle" onchange="toggleLocationField()"><span class="slider"></span></label>
-        </div>
-        <input type="text" id="rLocation" class="form-input hidden" placeholder="输入位置地址...">
-      </div>
-      <div class="form-group form-row-split">
-        <label class="form-label">消息提醒</label>
-        <label class="switch"><input type="checkbox" id="rMessageReminder"><span class="slider"></span></label>
-      </div>
-      <div class="form-group" onclick="focusField('rTag')">
-        <label class="form-label">标签</label>
-        <input type="text" id="rTag" class="form-input form-input-inline" placeholder="添加分类标签">
-      </div>
-      <div class="form-group" onclick="focusField('rNotes')">
-        <label class="form-label">备注</label>
-        <textarea id="rNotes" class="form-input form-textarea" placeholder="备注..." rows="2"></textarea>
-      </div>
-      <div class="form-group">
-        <div class="form-row-split">
-          <label class="form-label">图片</label>
-          <button id="btnRemoveImg" class="btn-small btn-danger hidden" onclick="removeImage()">移除图片</button>
-        </div>
-        <input type="hidden" id="rImage" data-value="" data-image-removed="false">
-        <div id="rImagePreview" class="img-preview hidden"></div>
-        <input type="file" id="rImageFile" class="form-input-file" accept="image/*" onchange="handleImageInput(this)">
-        <button class="btn-select-img" onclick="document.getElementById('rImageFile').click()">选择图片</button>
-      </div>
-      <div class="form-group">
-        <div class="form-row-split">
-          <label class="form-label">旗标</label>
-          <label class="switch"><input type="checkbox" id="rFlagged"><span class="slider"></span></label>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">优先级</label>
-        <div class="prio-btns" id="prioBtns">
-          <button class="prio-btn selected" data-prio="none" onclick="selPrio(this)">无</button>
-          <button class="prio-btn" data-prio="low" onclick="selPrio(this)">!</button>
-          <button class="prio-btn" data-prio="medium" onclick="selPrio(this)">!!</button>
-          <button class="prio-btn" data-prio="high" onclick="selPrio(this)">!!!</button>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">列表</label>
-        <select id="rList" class="form-input form-select"></select>
-      </div>
-      <div class="form-group" style="text-align:center;">
-        <button id="btnDeleteReminder" class="btn-delete hidden" onclick="softDeleteReminder(document.getElementById('rEditId').value);closeModal('reminderModal')">删除提醒事项</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 列表模态框 ===== -->
-<div id="listModal" class="modal-overlay hidden" onclick="closeModalOutside(event,'listModal')">
-  <div class="modal-sheet" onclick="event.stopPropagation()">
-    <div class="modal-header">
-      <button class="modal-btn-cancel" onclick="closeModal('listModal')">取消</button>
-      <span id="listModalTitle" class="modal-title">新建列表</span>
-      <button class="modal-btn-save" onclick="saveList()">存储</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="lEditId" value="">
-      <div class="form-group">
-        <input type="text" id="lName" class="form-input form-input-title" placeholder="列表名称">
-      </div>
-      <div class="form-group">
-        <label class="form-label">类型</label>
-        <select id="lType" class="form-input form-select">
-          <option value="标准">标准</option>
-          <option value="工作">工作</option>
-          <option value="购物清单">购物清单</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">颜色</label>
-        <div class="color-row" id="colorRow">
-          <span class="color-dot selected" data-color="#007aff" style="background:#007aff" onclick="selColor(this)"></span>
-          <span class="color-dot" data-color="#ff3b30" style="background:#ff3b30" onclick="selColor(this)"></span>
-          <span class="color-dot" data-color="#34c759" style="background:#34c759" onclick="selColor(this)"></span>
-          <span class="color-dot" data-color="#ff9500" style="background:#ff9500" onclick="selColor(this)"></span>
-          <span class="color-dot" data-color="#af52de" style="background:#af52de" onclick="selColor(this)"></span>
-          <span class="color-dot" data-color="#5ac8fa" style="background:#5ac8fa" onclick="selColor(this)"></span>
-          <span class="color-dot" data-color="#ffcc00" style="background:#ffcc00" onclick="selColor(this)"></span>
-          <span class="color-dot" data-color="#8B4513" style="background:#8B4513" onclick="selColor(this)"></span>
-          <span class="color-dot" data-color="#4B0082" style="background:#4B0082" onclick="selColor(this)"></span>
-          <span class="color-dot" data-color="#00BFFF" style="background:#00BFFF" onclick="selColor(this)"></span>
-          <span class="color-dot" data-color="#FF69B4" style="background:#FF69B4" onclick="selColor(this)"></span>
-          <span class="color-dot" data-color="#8e8e93" style="background:#8e8e93" onclick="selColor(this)"></span>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">图标</label>
-        <div class="icon-grid" id="iconGrid">
-          <!-- 动态渲染 -->
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 列表详情模态框 ===== -->
-<div id="listDetailModal" class="modal-overlay hidden" onclick="closeModalOutside(event,'listDetailModal')">
-  <div class="modal-sheet" onclick="event.stopPropagation()" style="max-height:80vh;overflow-y:auto;">
-    <div class="modal-header">
-      <button class="modal-btn-cancel" onclick="closeModal('listDetailModal')">关闭</button>
-      <span id="listDetailTitle" class="modal-title">列表详情</span>
-      <button class="modal-btn-save" onclick="showListMoreMenu()">⋯</button>
-    </div>
-    <div id="listDetailContent" class="modal-body" style="padding-top:0;">
-      <!-- 动态渲染 -->
-    </div>
-    <div style="padding:0 16px 16px;text-align:center;">
-      <button class="btn-export-list" onclick="exportListData()">导出列表数据</button>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 设置模态框 ===== -->
-<div id="settingsModal" class="modal-overlay hidden" onclick="closeModalOutside(event,'settingsModal')">
-  <div class="modal-sheet" onclick="event.stopPropagation()">
-    <div class="modal-header">
-      <button class="modal-btn-cancel" onclick="closeModal('settingsModal')">关闭</button>
-      <span class="modal-title">设置</span>
-      <span></span>
-    </div>
-    <div class="modal-body">
-      <div class="settings-section">
-        <div class="settings-section-title">备份</div>
-        <div class="form-row-split">
-          <span class="form-label">自动备份（每日）</span>
-          <label class="switch"><input type="checkbox" id="autoBackupToggle" onchange="toggleAutoBackup()"><span class="slider"></span></label>
-        </div>
-        <div id="lastBackupTime" style="font-size:13px;color:var(--text3);margin-bottom:12px;"></div>
-        <button class="btn-settings" onclick="exportBackup()">导出备份</button>
-        <button class="btn-settings" onclick="importBackupFromText()">从文本恢复备份</button>
-        <div style="margin-top:8px;">
-          <label class="btn-settings" style="display:block;text-align:center;cursor:pointer;">从文件恢复备份
-            <input type="file" accept=".json" style="display:none" onchange="importBackup(this)">
-          </label>
-        </div>
-      </div>
-
-      <hr style="margin:16px 0;border-color:rgba(0,0,0,0.1)">
-
-      <div class="settings-section">
-        <div class="settings-section-title">WebDAV 同步</div>
-        <div class="form-group">
-          <label class="form-label">服务器地址</label>
-          <input type="text" id="syncServer" class="form-input form-input-inline" placeholder="https://your-server.com/remote.php/dav/files/user/">
-        </div>
-        <div class="form-group">
-          <label class="form-label">用户名</label>
-          <input type="text" id="syncUser" class="form-input form-input-inline" placeholder="用户名">
-        </div>
-        <div class="form-group">
-          <label class="form-label">密码</label>
-          <input type="password" id="syncPass" class="form-input form-input-inline" placeholder="密码">
-        </div>
-        <div id="syncStatus" style="font-size:13px;color:var(--text3);margin-bottom:8px;">未配置同步</div>
-        <button class="btn-settings" onclick="saveSyncConfig()">保存并测试</button>
-        <button class="btn-settings" onclick="syncNow()">立即同步</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== 新建列表浮动按钮 ===== -->
-<button class="new-list-btn" onclick="showNewListModal()" title="新建列表">+ 列表</button>
-
-<!-- JS 模块（严格按加载顺序） -->
-<script src="js/storage.js"></script>
-<script src="js/lists.js"></script>
-<script src="js/reminders.js"></script>
-<script src="js/calendar.js"></script>
-<script src="js/backup.js"></script>
-<script src="js/sync.js"></script>
-<script src="js/views.js"></script>
-<script src="js/app.js"></script>
-
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
 </body>
 </html>

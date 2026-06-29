@@ -1,227 +1,330 @@
-name: Build APK from Web App
+name: Build APK
 
 on:
   push:
     branches: [main, master]
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: "17"
+          java-version: '17'
+          distribution: 'temurin'
 
-      # 安装 Android SDK 命令行工具
-      - name: Setup Android SDK
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: 11076708
+
+      - name: Accept Android licenses
+        run: yes | sdkmanager --licenses
+
+      - name: Create Android project structure
         run: |
-          mkdir -p $ANDROID_HOME/cmdline-tools
-          cd $ANDROID_HOME/cmdline-tools
-          curl -sSfLO https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip -q commandlinetools-linux-11076708_latest.zip
-          mv cmdline-tools latest || true
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0" --channel=0 > /dev/null 2>&1
-
-      # 安装 Gradle
-      - uses: gradle/actions/setup-gradle@v4
-
-      # 生成 Android 项目结构
-      - name: Generate Android Project
-        run: |
+          # Create app module
           mkdir -p app/src/main/java/com/reminders/app
           mkdir -p app/src/main/res/values
-          for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi; do mkdir -p app/src/main/res/$dir; done
-          mkdir -p app/src/main/assets
+          mkdir -p app/src/main/res/drawable
+          mkdir -p app/src/main/res/xml
 
-          cp index.html app/src/main/assets/
-          cp -r css app/src/main/assets/
-          cp -r js app/src/main/assets/
-          cp manifest.json app/src/main/assets/
+          # Generate debug keystore
+          keytool -genkey -v \
+            -keystore debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
 
-          cat > app/src/main/AndroidManifest.xml << 'MANIFEST'
+      - name: Write build.gradle (project)
+        run: |
+          cat > build.gradle << 'BUILDEOF'
+          buildscript {
+            repositories {
+              google()
+              mavenCentral()
+            }
+            dependencies {
+              classpath 'com.android.tools.build:gradle:8.2.0'
+            }
+          }
+          allprojects {
+            repositories {
+              google()
+              mavenCentral()
+            }
+          }
+          BUILDEOF
+
+      - name: Write settings.gradle
+        run: |
+          cat > settings.gradle << 'EOF'
+          rootProject.name = 'Reminders'
+          include ':app'
+          EOF
+
+      - name: Write gradle.properties
+        run: |
+          cat > gradle.properties << 'EOF'
+          android.useAndroidX=true
+          org.gradle.jvmargs=-Xmx2048m
+          EOF
+
+      - name: Write app/build.gradle
+        run: |
+          cat > app/build.gradle << 'BUILDEOF'
+          plugins {
+            id 'com.android.application'
+          }
+
+          android {
+            namespace 'com.reminders.app'
+            compileSdk 34
+
+            defaultConfig {
+              applicationId 'com.reminders.app'
+              minSdk 24
+              targetSdk 34
+              versionCode 1
+              versionName '1.0'
+            }
+
+            signingConfigs {
+              debug {
+                storeFile file('../debug.keystore')
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+              }
+            }
+
+            buildTypes {
+              debug {
+                signingConfig signingConfigs.debug
+              }
+              release {
+                signingConfig signingConfigs.debug
+              }
+            }
+
+            compileOptions {
+              sourceCompatibility JavaVersion.VERSION_17
+              targetCompatibility JavaVersion.VERSION_17
+            }
+          }
+
+          dependencies {
+            implementation 'androidx.appcompat:appcompat:1.6.1'
+            implementation 'androidx.webkit:webkit:1.9.0'
+          }
+          BUILDEOF
+
+      - name: Write AndroidManifest.xml
+        run: |
+          cat > app/src/main/AndroidManifest.xml << 'MANIFESTEOF'
           <?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-              <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.INTERNET" />
+            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+            <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+            <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
-              <application
-                  android:allowBackup="true"
-                  android:label="提醒事项"
-                  android:supportsRtl="true"
-                  android:theme="@style/AppTheme"
-                  android:usesCleartextTraffic="true">
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:configChanges="orientation|screenSize|keyboardHidden">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
+            <application
+              android:allowBackup="true"
+              android:icon="@mipmap/ic_launcher"
+              android:label="Reminders"
+              android:supportsRtl="true"
+              android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+              android:usesCleartextTraffic="true">
+
+              <activity
+                android:name=".MainActivity"
+                android:exported="true"
+                android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+                android:windowSoftInputMode="adjustResize">
+                <intent-filter>
+                  <action android:name="android.intent.action.MAIN" />
+                  <category android:name="android.intent.category.LAUNCHER" />
+                </intent-filter>
+              </activity>
+            </application>
           </manifest>
-          MANIFEST
+          MANIFESTEOF
 
-          cat > app/src/main/java/com/reminders/app/MainActivity.java << 'JAVA'
+      - name: Write MainActivity.java
+        run: |
+          cat > app/src/main/java/com/reminders/app/MainActivity.java << 'JAVAEOF'
           package com.reminders.app;
 
           import android.app.Activity;
-          import android.content.SharedPreferences;
+          import android.content.Intent;
+          import android.net.Uri;
           import android.os.Bundle;
-          import android.webkit.JavascriptInterface;
+          import android.webkit.ValueCallback;
+          import android.webkit.WebChromeClient;
           import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebViewClient;
 
           public class MainActivity extends Activity {
-              @Override
-              protected void onCreate(Bundle savedInstanceState) {
-                  super.onCreate(savedInstanceState);
-                  WebView webView = new WebView(this);
-                  webView.setWebViewClient(new WebViewClient());
-                  webView.setWebChromeClient(new android.webkit.WebChromeClient() {
-                      @Override
-                      public boolean onShowFileChooser(WebView webView, android.webkit.ValueCallback<android.net.Uri[]> filePathCallback, android.webkit.WebChromeClient.FileChooserParams fileChooserParams) {
-                          return super.onShowFileChooser(webView, filePathCallback, fileChooserParams);
-                      }
-                  });
-                  WebSettings settings = webView.getSettings();
-                  settings.setJavaScriptEnabled(true);
-                  settings.setDomStorageEnabled(true);
-                  settings.setAllowFileAccess(true);
-                  settings.setAllowContentAccess(true);
-                  settings.setDatabaseEnabled(true);
-                  webView.addJavascriptInterface(new AndroidStorage(this), "AndroidStorage");
-                  webView.loadUrl("file:///android_asset/index.html");
-                  setContentView(webView);
-              }
+            private WebView webView;
+            private ValueCallback<Uri[]> filePathCallback;
+            private static final int FILE_CHOOSER_REQUEST = 1;
 
-              public static class AndroidStorage {
-                  private final SharedPreferences prefs;
-                  public AndroidStorage(Activity activity) {
-                      prefs = activity.getSharedPreferences("reminders_data", MODE_PRIVATE);
+            @Override
+            protected void onCreate(Bundle savedInstanceState) {
+              super.onCreate(savedInstanceState);
+              webView = new WebView(this);
+              setContentView(webView);
+
+              WebSettings settings = webView.getSettings();
+              settings.setJavaScriptEnabled(true);
+              settings.setAllowFileAccess(true);
+              settings.setAllowContentAccess(true);
+              settings.setDomStorageEnabled(true);
+              settings.setDatabaseEnabled(true);
+              settings.setAllowFileAccessFromFileURLs(true);
+              settings.setAllowUniversalAccessFromFileURLs(true);
+
+              webView.setWebViewClient(new WebViewClient());
+              webView.setWebChromeClient(new WebChromeClient() {
+                @Override
+                public boolean onShowFileChooser(WebView webView,
+                    ValueCallback<Uri[]> filePathCallback,
+                    FileChooserParams fileChooserParams) {
+                  MainActivity.this.filePathCallback = filePathCallback;
+                  Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                  intent.addCategory(Intent.CATEGORY_OPENABLE);
+                  intent.setType("*/*");
+                  startActivityForResult(Intent.createChooser(intent, "Choose File"), FILE_CHOOSER_REQUEST);
+                  return true;
+                }
+              });
+
+              webView.loadUrl("file:///android_asset/index.html");
+            }
+
+            @Override
+            protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+              super.onActivityResult(requestCode, resultCode, data);
+              if (requestCode == FILE_CHOOSER_REQUEST) {
+                if (filePathCallback != null) {
+                  Uri[] results = null;
+                  if (resultCode == Activity.RESULT_OK && data != null) {
+                    String dataString = data.getDataString();
+                    if (dataString != null) {
+                      results = new Uri[]{Uri.parse(dataString)};
+                    }
                   }
-                  @JavascriptInterface
-                  public void saveData(String key, String value) {
-                      prefs.edit().putString(key, value).apply();
-                  }
-                  @JavascriptInterface
-                  public String loadData(String key) {
-                      return prefs.getString(key, null);
-                  }
-                  @JavascriptInterface
-                  public void removeData(String key) {
-                      prefs.edit().remove(key).apply();
-                  }
+                  filePathCallback.onReceiveValue(results);
+                  filePathCallback = null;
+                }
               }
+            }
+
+            @Override
+            public void onBackPressed() {
+              if (webView.canGoBack()) {
+                webView.goBack();
+              } else {
+                super.onBackPressed();
+              }
+            }
           }
-          JAVA
+          JAVAEOF
 
-          cat > app/src/main/res/values/styles.xml << 'STYLES'
-          <?xml version="1.0" encoding="utf-8"?>
-          <resources>
-              <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
-                  <item name="android:statusBarColor">#f2f2f7</item>
-                  <item name="android:windowLightStatusBar">true</item>
-              </style>
-          </resources>
-          STYLES
+      - name: Copy assets
+        run: |
+          mkdir -p app/src/main/assets
 
-          # 用 Python 生成有效的多密度启动图标
-          python3 -c "
-          import struct, zlib
-          def create_png(width, height, color):
-              def chunk(ct, data):
-                  c = ct + data
-                  crc = struct.pack('>I', zlib.crc32(c) & 0xffffffff)
-                  return struct.pack('>I', len(data)) + c + crc
-              raw = b''
-              for y in range(height):
-                  raw += b'\x00'
-                  for x in range(width):
-                      raw += bytes(color)
-              return (b'\x89PNG\r\n\x1a\n' +
-                      chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)) +
-                      chunk(b'IDAT', zlib.compress(raw)) +
-                      chunk(b'IEND', b''))
-          sizes = {'mipmap-mdpi':48, 'mipmap-hdpi':72, 'mipmap-xhdpi':96, 'mipmap-xxhdpi':144}
-          for folder, size in sizes.items():
-              with open(f'app/src/main/res/{folder}/ic_launcher.png', 'wb') as f:
-                  f.write(create_png(size, size, (0, 122, 255)))
-          "
+          # Copy all web app files (exclude .github, gradle, app directories)
+          find . -maxdepth 1 -not -name '.' -not -name '..' \
+            -not -name '.git' -not -name '.github' \
+            -not -name 'app' -not -name 'build' \
+            -not -name 'gradle' -not -name '.gradle' \
+            -not -name '*.gradle' -not -name '*.properties' \
+            -not -name '*.keystore' \
+            -exec cp -r {} app/src/main/assets/ \;
 
-          # 统一使用 buildscript 方式
-          cat > build.gradle << 'ROOTBUILD'
-          buildscript {
-              repositories {
-                  google()
-                  mavenCentral()
+          # Remove any nested .github from assets
+          rm -rf app/src/main/assets/.github
+
+          echo "Assets copied. Content:"
+          ls -la app/src/main/assets/
+          echo "---"
+          find app/src/main/assets -type f
+
+      - name: Generate launcher icons
+        run: |
+          cat > GenerateIcons.java << 'GENEOF'
+          import java.awt.*;
+          import java.awt.image.*;
+          import java.io.*;
+          import javax.imageio.*;
+          public class GenerateIcons {
+            public static void main(String[] args) throws Exception {
+              int[] sizes = {192, 512, 48, 72, 96, 144};
+              for (int size : sizes) {
+                BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+                Graphics2D g = img.createGraphics();
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                // Background circle
+                g.setColor(new Color(0x007AFF));
+                g.fillOval(size/8, size/8, size*3/4, size*3/4);
+                // Checkmark
+                g.setColor(Color.WHITE);
+                g.setStroke(new BasicStroke(size/24f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                int cx = size/2, cy = size/2;
+                int[] xs = {cx - size/5, cx - size/20, cx + size/4};
+                int[] ys = {cy, cy + size/6, cy - size/5};
+                g.drawPolyline(xs, ys, 3);
+                g.dispose();
+                String name = (size >= 192) ? ("icon-" + size + ".png") : ("ic_launcher_m" + size + ".png");
+                File out;
+                if (size >= 192) {
+                  out = new File("app/src/main/assets/img/" + name);
+                  out.getParentFile().mkdirs();
+                } else {
+                  out = new File("app/src/main/res/mipmap-h" + size + "dpi/ic_launcher.png");
+                  out.getParentFile().mkdirs();
+                }
+                ImageIO.write(img, "PNG", out);
               }
-              dependencies {
-                  classpath 'com.android.tools.build:gradle:8.2.0'
-              }
+            }
           }
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          ROOTBUILD
+          GENEOF
+          javac GenerateIcons.java
+          java GenerateIcons
 
-          cat > app/build.gradle << 'APPBUILD'
-          apply plugin: 'com.android.application'
+      - name: Copy default mipmap
+        run: |
+          mkdir -p app/src/main/res/mipmap-mdpi
+          cp app/src/main/res/mipmap-h48dpi/ic_launcher.png app/src/main/res/mipmap-mdpi/ic_launcher.png 2>/dev/null || true
+          mkdir -p app/src/main/res/mipmap-xhdpi
+          cp app/src/main/res/mipmap-h96dpi/ic_launcher.png app/src/main/res/mipmap-xhdpi/ic_launcher.png 2>/dev/null || true
+          mkdir -p app/src/main/res/mipmap-xxhdpi
+          cp app/src/main/res/mipmap-h144dpi/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher.png 2>/dev/null || true
 
-          android {
-              namespace 'com.reminders.app'
-              compileSdk 34
-              defaultConfig {
-                  applicationId "com.reminders.app"
-                  minSdk 24
-                  targetSdk 34
-                  versionCode 1
-                  versionName "1.0"
-              }
-              buildTypes {
-                  release {
-                      minifyEnabled false
-                  }
-              }
-              compileOptions {
-                  sourceCompatibility JavaVersion.VERSION_17
-                  targetCompatibility JavaVersion.VERSION_17
-              }
-          }
-          APPBUILD
-
-          cat > settings.gradle << 'SETTINGS'
-          rootProject.name = "RemindersApp"
-          include ':app'
-          SETTINGS
-
-          cat > gradle.properties << 'GP'
-          org.gradle.jvmargs=-Xmx2048m -XX:+UseParallelGC
-          android.useAndroidX=true
-          android.nonTransitiveRClass=true
-          GP
-
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
+      - name: Setup Gradle wrapper
+        run: |
+          gradle wrapper --gradle-version 8.5
 
       - name: Build APK
-        run: gradle assembleDebug --no-daemon
+        run: ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: reminders-app
+          name: reminders-apk
           path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30

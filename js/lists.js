@@ -1,63 +1,73 @@
-/* lists.js — 列表管理（创建/编辑/删除列表） */
-'use strict';
+/* lists.js - List management (create, edit, delete, reorder) */
 
-var ListManager = (function(){
-  var colors = ['#007aff','#ff3b30','#34c759','#ff9500','#af52de','#5ac8fa','#ffcc00','#8B4513','#4B0082','#FF69B4','#8e8e93','#00BFFF'];
-
-  var icons = [
-    '📋','📌','📅','⭐','🚩','❤️','💙','💚','💛','🧡','💜','🎯',
-    '🏠','🏢','🏫','🏥','🛒','🛍️','🎁','🎂','🎓','💊','✂️','📖',
-    '💳','💰','💪','🏃','🍽️','🍷','🎧','💻','🎮','🏰','⛺','🎵',
-    '☕','🚗','✈️','🚲','🚢','🌍','🐶','🐱','🌸','🌿','🔑','🔔',
-    '✅','❌','⬆️','🔄','📊','📝'
+const ListManager = (() => {
+  const LIST_COLORS = [
+    '#ff3b30', '#ff9500', '#ffcc00', '#34c759', '#007aff',
+    '#5856d6', '#af52de', '#ff2d55', '#00c7be', '#30b0c7',
+    '#32ade6', '#8e8e93', '#a2845e'
   ];
 
-  function randColor(){ return colors[Math.floor(Math.random()*colors.length)]; }
-  function lid(){ return 'l'+Date.now()+Math.random().toString(36).slice(2,8); }
-
-  function initDefaultLists(D){
-    if(!D.lists.length){
-      D.lists=[
-        {id:lid(),name:'提醒事项',type:'标准',color:'#007aff',icon:'📋'},
-        {id:lid(),name:'工作',type:'工作',color:'#ff9500',icon:'🏢'},
-        {id:lid(),name:'购物清单',type:'购物清单',color:'#34c759',icon:'🛒'}
-      ];
-    }
+  function getLists() {
+    const data = Storage.load();
+    return data.lists.sort((a, b) => a.order - b.order);
   }
 
-  function saveList(D, name, type, icon, color, editId){
-    var list = { id: editId || lid(), name: name, type: type, color: color, icon: icon };
-    if(editId){
-      var idx = D.lists.findIndex(function(l){ return l.id === editId; });
-      if(idx >= 0) D.lists[idx] = list;
-    } else {
-      D.lists.push(list);
-    }
+  function getList(id) {
+    const data = Storage.load();
+    return data.lists.find(l => l.id === id);
   }
 
-  function deleteList(D, id){
-    var idx = D.lists.findIndex(function(l){ return l.id === id; });
-    if(idx >= 0) D.lists.splice(idx, 1);
+  function createList(name, color, icon) {
+    const data = Storage.load();
+    const list = {
+      id: Storage.generateId('list'),
+      name: name || 'New List',
+      color: color || LIST_COLORS[Math.floor(Math.random() * LIST_COLORS.length)],
+      icon: icon || 'list',
+      order: data.lists.length
+    };
+    data.lists.push(list);
+    Storage.save(data);
+    return list;
   }
 
-  function moveList(D, id, direction){
-    var idx = D.lists.findIndex(function(l){ return l.id === id; });
-    if(idx < 0) return;
-    var newIdx = idx + direction;
-    if(newIdx < 0 || newIdx >= D.lists.length) return;
-    var tmp = D.lists[idx];
-    D.lists[idx] = D.lists[newIdx];
-    D.lists[newIdx] = tmp;
+  function updateList(id, updates) {
+    const data = Storage.load();
+    const list = data.lists.find(l => l.id === id);
+    if (!list) return null;
+    Object.assign(list, updates);
+    Storage.save(data);
+    return list;
   }
 
-  return {
-    colors: colors,
-    icons: icons,
-    randColor: randColor,
-    lid: lid,
-    initDefaultLists: initDefaultLists,
-    saveList: saveList,
-    deleteList: deleteList,
-    moveList: moveList
-  };
+  function deleteList(id) {
+    const data = Storage.load();
+    const idx = data.lists.findIndex(l => l.id === id);
+    if (idx === -1) return false;
+    data.lists.splice(idx, 1);
+    data.reminders = data.reminders.filter(r => r.listId !== id);
+    Storage.save(data);
+    return true;
+  }
+
+  function reorderLists(orderedIds) {
+    const data = Storage.load();
+    orderedIds.forEach((id, i) => {
+      const list = data.lists.find(l => l.id === id);
+      if (list) list.order = i;
+    });
+    Storage.save(data);
+  }
+
+  function getListColor(listId) {
+    const list = getList(listId);
+    return list ? list.color : '#8e8e93';
+  }
+
+  function getListIcon(listId) {
+    const list = getList(listId);
+    return list ? list.icon : 'list';
+  }
+
+  return { LIST_COLORS, getLists, getList, createList, updateList, deleteList, reorderLists, getListColor, getListIcon };
 })();
