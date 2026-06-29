@@ -38,6 +38,12 @@ var App = (function(){
     ReminderView.renderWidget();
     if(D.showCalendar) renderCalendarView();
     save();
+    if(localStorage.getItem('auto_backup_on') === 'true'){
+      var lb = localStorage.getItem('last_backup_time');
+      if(!lb || (Date.now() - new Date(lb).getTime() > 24*60*60*1000)){
+        BackupManager.autoBackup({ reminders: D.reminders, lists: D.lists });
+      }
+    }
   }
 
   function renderCalendarView(){
@@ -100,6 +106,7 @@ var App = (function(){
     var title = document.getElementById('rTitle').value.trim();
     if(!title){ alert('请输入标题'); return; }
     var imageData = document.getElementById('rImage').dataset.value || '';
+    var imageRemoved = document.getElementById('rImage').dataset.imageRemoved === 'true';
     var formData = {
       title: title, dateTime: document.getElementById('rDateTime').value,
       location: document.getElementById('rLocation').value.trim(),
@@ -107,7 +114,7 @@ var App = (function(){
       flagged: document.getElementById('rFlagged').checked,
       listId: document.getElementById('rList').value || D.lists[0].id,
       editId: document.getElementById('rEditId').value,
-      priority: D.selectedPrio, image: imageData
+      priority: D.selectedPrio, image: imageData, imageRemoved: imageRemoved
     };
     ReminderManager.saveReminder(D, formData);
     closeModal('reminderModal'); render();
@@ -130,8 +137,8 @@ var App = (function(){
     // 图像预览
     var imgEl = document.getElementById('rImagePreview');
     var imgInput = document.getElementById('rImage');
-    if(r.image){ imgInput.dataset.value = r.image; imgEl.innerHTML = '<img src="'+r.image+'" class="img-preview-thumb">'; imgEl.classList.remove('hidden'); }
-    else { imgInput.dataset.value = ''; imgEl.innerHTML = ''; imgEl.classList.add('hidden'); }
+    if(r.image){ imgInput.dataset.value = r.image; imgInput.dataset.imageRemoved = 'false'; imgEl.innerHTML = '<img src="'+r.image+'" class="img-preview-thumb">'; imgEl.classList.remove('hidden'); }
+    else { imgInput.dataset.value = ''; imgInput.dataset.imageRemoved = 'false'; imgEl.innerHTML = ''; imgEl.classList.add('hidden'); }
     document.getElementById('reminderModal').classList.remove('hidden');
     document.getElementById('fab').classList.add('hidden');
     // 删除按钮
@@ -167,7 +174,7 @@ var App = (function(){
     D.showCalendar = !D.showCalendar;
     var btn = document.getElementById('calToggleBtn');
     btn.textContent = D.showCalendar ? '列表' : '日历';
-    var els = ['calendarPanel','widgetCard','listsSection','reminderList','searchWrap','categoryTags','tagFilters','emptyState','quickCards','quickToolbarWrap','recentDelete'];
+    var els = ['calendarPanel','widgetCard','listsSection','reminderList','searchWrap','tagFilters','emptyState','quickCards','suggestList','recentDelete'];
     if(D.showCalendar){
       els.forEach(function(id){ var e=document.getElementById(id); if(e) e.classList.add('hidden'); });
       document.getElementById('calendarPanel').classList.remove('hidden');
@@ -182,7 +189,7 @@ var App = (function(){
     D.showCalendar = false;
     document.getElementById('calToggleBtn').textContent = '日历';
     document.getElementById('calendarPanel').classList.add('hidden');
-    var restoreEls = ['quickCards','searchWrap','categoryTags','tagFilters','suggestList','widgetCard','listsSection','recentDelete','reminderList','emptyState'];
+    var restoreEls = ['quickCards','searchWrap','tagFilters','suggestList','widgetCard','listsSection','recentDelete','reminderList','emptyState'];
     restoreEls.forEach(function(id){
       var e = document.getElementById(id);
       if(e) e.classList.remove('hidden');
@@ -212,6 +219,8 @@ var App = (function(){
     document.getElementById('btnDeleteReminder').classList.add('hidden');
     document.getElementById('rImagePreview').innerHTML = ''; document.getElementById('rImagePreview').classList.add('hidden');
     document.getElementById('rImage').dataset.value = '';
+    document.getElementById('rImage').dataset.imageRemoved = 'false';
+    document.getElementById('btnRemoveImg').classList.add('hidden');
     D.selectedPrio = 'none'; resetPrioBtns();
     var noneBtn = document.querySelector('#prioBtns [data-prio="none"]');
     if(noneBtn) noneBtn.classList.add('selected');
@@ -292,18 +301,22 @@ var App = (function(){
     var reader = new FileReader();
     reader.onload = function(e){
       document.getElementById('rImage').dataset.value = e.target.result;
+      document.getElementById('rImage').dataset.imageRemoved = 'false';
       var preview = document.getElementById('rImagePreview');
       preview.innerHTML = '<img src="'+e.target.result+'" class="img-preview-thumb">';
       preview.classList.remove('hidden');
+      document.getElementById('btnRemoveImg').classList.remove('hidden');
     };
     reader.readAsDataURL(file);
   }
 
   function removeImage(){
     document.getElementById('rImage').dataset.value = '';
+    document.getElementById('rImage').dataset.imageRemoved = 'true';
     var preview = document.getElementById('rImagePreview');
     preview.innerHTML = ''; preview.classList.add('hidden');
     document.getElementById('rImageFile').value = '';
+    document.getElementById('btnRemoveImg').classList.add('hidden');
   }
 
   // ── 快捷工具栏 ──
@@ -360,6 +373,84 @@ var App = (function(){
     window.handleImageInput = handleImageInput;
     window.removeImage = removeImage;
     window.focusField = focusField;
+    window.showSettings = showSettings;
+    window.exportBackup = exportBackup;
+    window.importBackup = importBackup;
+    window.toggleAutoBackup = toggleAutoBackup;
+    window.saveSyncConfig = saveSyncConfig;
+    window.syncNow = syncNow;
+  }
+
+  // ── Settings ──
+  function showSettings(){
+    document.getElementById('settingsModal').classList.remove('hidden');
+    document.getElementById('fab').classList.add('hidden');
+    document.getElementById('lastBackupTime').textContent = '上次备份：'+BackupManager.formatLastBackup();
+    var cfg = SyncManager.getConfig();
+    if(cfg){
+      document.getElementById('syncServer').value = cfg.server;
+      document.getElementById('syncUser').value = cfg.user;
+      document.getElementById('syncPass').value = cfg.pass;
+      SyncManager.updateStatus('已配置服务器');
+    } else {
+      SyncManager.updateStatus('未配置同步');
+    }
+    var autoOn = localStorage.getItem('auto_backup_on') === 'true';
+    document.getElementById('autoBackupToggle').checked = autoOn;
+  }
+
+  function exportBackup(){
+    BackupManager.exportData({ reminders: D.reminders, lists: D.lists });
+  }
+
+  function importBackup(input){
+    var file = input.files[0];
+    if(!file) return;
+    if(!confirm('恢复备份将覆盖当前所有数据，确定继续？')) { input.value=''; return; }
+    BackupManager.importFile(file, function(err, data){
+      if(err){ alert('备份文件无效'); input.value=''; return; }
+      D.reminders = data.reminders;
+      D.lists = data.lists;
+      render();
+      alert('数据已恢复');
+      input.value = '';
+    });
+  }
+
+  function toggleAutoBackup(){
+    var on = document.getElementById('autoBackupToggle').checked;
+    localStorage.setItem('auto_backup_on', on ? 'true' : 'false');
+    if(on) BackupManager.autoBackup({ reminders: D.reminders, lists: D.lists });
+  }
+
+  function saveSyncConfig(){
+    var server = document.getElementById('syncServer').value.trim();
+    var user = document.getElementById('syncUser').value.trim();
+    var pass = document.getElementById('syncPass').value.trim();
+    if(!server || !user || !pass){ alert('请填写完整的服务器信息'); return; }
+    SyncManager.saveConfig(server, user, pass);
+    SyncManager.updateStatus('已保存，正在测试连接...');
+    SyncManager.sync(SyncManager.getConfig(), { reminders: D.reminders, lists: D.lists }, function(err, merged){
+      if(err){ SyncManager.updateStatus('连接失败: '+err); return; }
+      if(merged){
+        D.reminders = merged.reminders;
+        D.lists = merged.lists;
+        render();
+      }
+    });
+  }
+
+  function syncNow(){
+    var cfg = SyncManager.getConfig();
+    if(!cfg){ alert('请先配置同步服务器'); return; }
+    SyncManager.sync(cfg, { reminders: D.reminders, lists: D.lists }, function(err, merged){
+      if(err){ return; }
+      if(merged){
+        D.reminders = merged.reminders;
+        D.lists = merged.lists;
+        render();
+      }
+    });
   }
 
   return { init: init, expose: expose };

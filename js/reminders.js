@@ -32,6 +32,7 @@ var ReminderManager = (function(){
     if(D.view === 'today') list = list.filter(function(r){ return !r.completed && r.date === ts; });
     else if(D.view === 'scheduled') list = list.filter(function(r){ return !r.completed && r.date; });
     else if(D.view === 'completed') list = list.filter(function(r){ return r.completed; });
+    else if(D.view === 'flagged') list = list.filter(function(r){ return !r.completed && r.flagged; });
     else list = list.filter(function(r){ return !r.completed; });
     if(D.view !== 'completed'){
       if(D.cat === 'today') list = list.filter(function(r){ return r.date === ts; });
@@ -96,7 +97,7 @@ var ReminderManager = (function(){
       completed: existing ? existing.completed : false,
       deleted: existing ? existing.deleted : false,
       deletedAt: existing ? existing.deletedAt : null,
-      image: formData.image || (existing ? existing.image : null),
+      image: formData.imageRemoved ? null : (formData.image || (existing ? existing.image : null)),
       createdAt: existing ? existing.createdAt || new Date().toISOString() : new Date().toISOString()
     };
     if(editId){

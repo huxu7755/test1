@@ -109,6 +109,8 @@ var ReminderView = (function(){
   }
 
   function bindListSwipe(el){
+    if(el.dataset.swipeBound === 'true') return;
+    el.dataset.swipeBound = 'true';
     var touchStartX = 0, touchStartY = 0, swipedItem = null;
     el.addEventListener('touchstart', function(e){
       var inner = e.target.closest('.list-item-inner');
@@ -216,6 +218,8 @@ var ReminderView = (function(){
   }
 
   function bindSwipeDelete(container){
+    if(container.dataset.swipeBound === 'true') return;
+    container.dataset.swipeBound = 'true';
     var touchStartX = 0, swipedItem = null;
     container.addEventListener('touchstart', function(e){
       var inner = e.target.closest('.rm-item-inner');
