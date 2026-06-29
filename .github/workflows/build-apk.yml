@@ -38,7 +38,7 @@ jobs:
         run: |
           mkdir -p app/src/main/java/com/reminders/app
           mkdir -p app/src/main/res/values
-          mkdir -p app/src/main/res/mipmap-hdpi
+          for dir in mipmap-mdpi mipmap-hdpi mipmap-xhdpi mipmap-xxhdpi; do mkdir -p app/src/main/res/$dir; done
           mkdir -p app/src/main/assets
 
           cp index.html app/src/main/assets/
@@ -105,8 +105,28 @@ jobs:
           </resources>
           STYLES
 
-          # 简单的启动图标（1x1 透明 PNG）
-          printf '\x89PNG\x0d\x0a\x1a\x0a\x00\x00\x00\x0dIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x02\x00\x00\x00\x90wS\xde\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N\x00\x00\x00\x00IEND\xaeB`\x82' > app/src/main/res/mipmap-hdpi/ic_launcher.png
+          # 用 Python 生成有效的多密度启动图标
+          python3 -c "
+          import struct, zlib
+          def create_png(width, height, color):
+              def chunk(ct, data):
+                  c = ct + data
+                  crc = struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+                  return struct.pack('>I', len(data)) + c + crc
+              raw = b''
+              for y in range(height):
+                  raw += b'\x00'
+                  for x in range(width):
+                      raw += bytes(color)
+              return (b'\x89PNG\r\n\x1a\n' +
+                      chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0)) +
+                      chunk(b'IDAT', zlib.compress(raw)) +
+                      chunk(b'IEND', b''))
+          sizes = {'mipmap-mdpi':48, 'mipmap-hdpi':72, 'mipmap-xhdpi':96, 'mipmap-xxhdpi':144}
+          for folder, size in sizes.items():
+              with open(f'app/src/main/res/{folder}/ic_launcher.png', 'wb') as f:
+                  f.write(create_png(size, size, (0, 122, 255)))
+          "
 
           # 统一使用 buildscript 方式
           cat > build.gradle << 'ROOTBUILD'
