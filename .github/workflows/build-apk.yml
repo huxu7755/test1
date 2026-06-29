@@ -1,0 +1,195 @@
+name: Build APK from Web App
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: "platforms;android-34 build-tools;34.0.0"
+
+      - name: Generate Android Project
+        run: |
+          mkdir -p app/src/main/java/com/reminders/app
+          mkdir -p app/src/main/res/values
+          mkdir -p app/src/main/res/xml
+          mkdir -p app/src/main/assets
+
+          # Copy web app to assets
+          cp index.html app/src/main/assets/
+
+          # AndroidManifest.xml
+          cat > app/src/main/AndroidManifest.xml << 'MANIFEST'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.reminders.app">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="提醒事项"
+                  android:supportsRtl="true"
+                  android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+                  android:usesCleartextTraffic="true">
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:configChanges="orientation|screenSize">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          MANIFEST
+
+          # MainActivity.java
+          cat > app/src/main/java/com/reminders/app/MainActivity.java << 'JAVA'
+          package com.reminders.app;
+
+          import android.app.Activity;
+          import android.os.Bundle;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+
+          public class MainActivity extends Activity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  WebView webView = new WebView(this);
+                  webView.setWebViewClient(new WebViewClient());
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setAllowFileAccess(true);
+                  settings.setAllowContentAccess(true);
+                  settings.setDatabaseEnabled(true);
+                  settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+                  webView.loadUrl("file:///android_asset/index.html");
+                  setContentView(webView);
+              }
+          }
+          JAVA
+
+          # res/values/styles.xml
+          cat > app/src/main/res/values/styles.xml << 'STYLES'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+                  <item name="android:statusBarColor">#f2f2f7</item>
+                  <item name="android:windowLightStatusBar">true</item>
+              </style>
+          </resources>
+          STYLES
+
+          # network_security_config.xml
+          cat > app/src/main/res/xml/network_security_config.xml << 'NSC'
+          <?xml version="1.0" encoding="utf-8"?>
+          <network-security-config>
+              <base-config cleartextTrafficPermitted="true" />
+          </network-security-config>
+          NSC
+
+          # settings.gradle
+          cat > settings.gradle << 'SETTINGS'
+          rootProject.name = "RemindersApp"
+          include ':app'
+          SETTINGS
+
+          # Root build.gradle
+          cat > build.gradle << 'ROOTBUILD'
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.0'
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          ROOTBUILD
+
+          # App build.gradle
+          cat > app/build.gradle << 'APPBUILD'
+          plugins {
+              id 'com.android.application'
+          }
+          android {
+              namespace 'com.reminders.app'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.reminders.app"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+          }
+          APPBUILD
+
+          # gradle.properties
+          cat > gradle.properties << 'GP'
+          org.gradle.jvmargs=-Xmx2048m
+          android.useAndroidX=true
+          GP
+
+          # local.properties (SDK path for CI)
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+      - name: Build APK
+        run: |
+          chmod +x gradlew 2>/dev/null || true
+          # Use gradle wrapper if present, otherwise use system gradle
+          if [ -f "./gradlew" ]; then
+            ./gradlew assembleRelease --no-daemon
+          else
+            gradle assembleRelease --no-daemon
+          fi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: reminders-app
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          retention-days: 30
