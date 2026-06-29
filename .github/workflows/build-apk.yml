@@ -305,12 +305,14 @@ jobs:
           }
           GENEOF
           javac GenerateIcons.java
-          java GenerateIcons
+          java -Djava.awt.headless=true GenerateIcons
 
       - name: Copy default mipmap
         run: |
           mkdir -p app/src/main/res/mipmap-mdpi
           cp app/src/main/res/mipmap-h48dpi/ic_launcher.png app/src/main/res/mipmap-mdpi/ic_launcher.png 2>/dev/null || true
+          mkdir -p app/src/main/res/mipmap-hdpi
+          cp app/src/main/res/mipmap-h72dpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher.png 2>/dev/null || true
           mkdir -p app/src/main/res/mipmap-xhdpi
           cp app/src/main/res/mipmap-h96dpi/ic_launcher.png app/src/main/res/mipmap-xhdpi/ic_launcher.png 2>/dev/null || true
           mkdir -p app/src/main/res/mipmap-xxhdpi
@@ -318,7 +320,11 @@ jobs:
 
       - name: Setup Gradle wrapper
         run: |
-          gradle wrapper --gradle-version 8.5
+          # Download Gradle 8.5 (not pre-installed on ubuntu-latest)
+          curl -fsSL https://services.gradle.org/distributions/gradle-8.5-bin.zip -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp
+          # Generate wrapper files (gradlew, gradlew.bat, gradle-wrapper.jar, gradle-wrapper.properties)
+          /tmp/gradle-8.5/bin/gradle wrapper --gradle-version 8.5
 
       - name: Build APK
         run: ./gradlew assembleDebug
