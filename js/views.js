@@ -630,6 +630,17 @@ const Views = (() => {
       </div>
     `;
     overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    // Click backdrop to close
+    overlay.onclick = function(e) {
+      if (e.target === overlay) {
+        nrmImageData = null;
+        overlay.classList.remove('open');
+        overlay.id = 'modal-overlay';
+        document.body.style.overflow = '';
+      }
+    };
 
     setTimeout(() => {
       const titleInput = document.getElementById('nrm-title');
@@ -736,6 +747,7 @@ const Views = (() => {
     if (overlay) {
       overlay.classList.remove('open');
       overlay.id = 'modal-overlay';
+      document.body.style.overflow = '';
     }
     refresh();
     renderSidebar();
