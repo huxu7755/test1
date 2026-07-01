@@ -25,7 +25,10 @@ jobs:
           cmdline-tools-version: 11076708
 
       - name: Accept Android licenses
-        run: yes | sdkmanager --licenses
+        run: yes | sdkmanager --sdk_root=${ANDROID_HOME} --licenses
+
+      - name: Install SDK packages
+        run: sdkmanager --sdk_root=${ANDROID_HOME} "platforms;android-34" "build-tools;34.0.0"
 
       - name: Create Android project structure
         run: |
@@ -274,8 +277,16 @@ jobs:
           import javax.imageio.*;
           public class GenerateIcons {
             public static void main(String[] args) throws Exception {
-              int[] sizes = {192, 512, 48, 72, 96, 144};
-              for (int size : sizes) {
+              // Standard Android density buckets: mdpi(48), hdpi(72), xhdpi(96), xxhdpi(144)
+              String[][] densityMap = {
+                {"48", "mdpi"},
+                {"72", "hdpi"},
+                {"96", "xhdpi"},
+                {"144", "xxhdpi"},
+              };
+              for (String[] entry : densityMap) {
+                int size = Integer.parseInt(entry[0]);
+                String density = entry[1];
                 BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
                 Graphics2D g = img.createGraphics();
                 g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -290,15 +301,27 @@ jobs:
                 int[] ys = {cy, cy + size/6, cy - size/5};
                 g.drawPolyline(xs, ys, 3);
                 g.dispose();
-                String name = (size >= 192) ? ("icon-" + size + ".png") : ("ic_launcher_m" + size + ".png");
-                File out;
-                if (size >= 192) {
-                  out = new File("app/src/main/assets/img/" + name);
-                  out.getParentFile().mkdirs();
-                } else {
-                  out = new File("app/src/main/res/mipmap-h" + size + "dpi/ic_launcher.png");
-                  out.getParentFile().mkdirs();
-                }
+                File out = new File("app/src/main/res/mipmap-" + density + "/ic_launcher.png");
+                out.getParentFile().mkdirs();
+                ImageIO.write(img, "PNG", out);
+              }
+              // PWA icons (192, 512) for assets
+              int[] pwaSizes = {192, 512};
+              for (int size : pwaSizes) {
+                BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+                Graphics2D g = img.createGraphics();
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g.setColor(new Color(0x007AFF));
+                g.fillOval(size/8, size/8, size*3/4, size*3/4);
+                g.setColor(Color.WHITE);
+                g.setStroke(new BasicStroke(size/24f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+                int cx = size/2, cy = size/2;
+                int[] xs = {cx - size/5, cx - size/20, cx + size/4};
+                int[] ys = {cy, cy + size/6, cy - size/5};
+                g.drawPolyline(xs, ys, 3);
+                g.dispose();
+                File out = new File("app/src/main/assets/img/icon-" + size + ".png");
+                out.getParentFile().mkdirs();
                 ImageIO.write(img, "PNG", out);
               }
             }
@@ -306,17 +329,6 @@ jobs:
           GENEOF
           javac GenerateIcons.java
           java -Djava.awt.headless=true GenerateIcons
-
-      - name: Copy default mipmap
-        run: |
-          mkdir -p app/src/main/res/mipmap-mdpi
-          cp app/src/main/res/mipmap-h48dpi/ic_launcher.png app/src/main/res/mipmap-mdpi/ic_launcher.png 2>/dev/null || true
-          mkdir -p app/src/main/res/mipmap-hdpi
-          cp app/src/main/res/mipmap-h72dpi/ic_launcher.png app/src/main/res/mipmap-hdpi/ic_launcher.png 2>/dev/null || true
-          mkdir -p app/src/main/res/mipmap-xhdpi
-          cp app/src/main/res/mipmap-h96dpi/ic_launcher.png app/src/main/res/mipmap-xhdpi/ic_launcher.png 2>/dev/null || true
-          mkdir -p app/src/main/res/mipmap-xxhdpi
-          cp app/src/main/res/mipmap-h144dpi/ic_launcher.png app/src/main/res/mipmap-xxhdpi/ic_launcher.png 2>/dev/null || true
 
       - name: Setup Gradle wrapper
         run: |
