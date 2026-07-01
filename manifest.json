@@ -1,7 +1,7 @@
 {
-  "name": "Reminders",
-  "short_name": "Reminders",
-  "description": "iOS-style Reminders app clone",
+  "name": "提醒事项",
+  "short_name": "提醒事项",
+  "description": "iOS 风格提醒事项应用",
   "start_url": "index.html",
   "display": "standalone",
   "orientation": "portrait",

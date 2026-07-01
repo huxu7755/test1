@@ -16,8 +16,8 @@ const Calendar = (() => {
 
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
-    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月',
+      '7月', '8月', '9月', '10月', '11月', '12月'];
 
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -32,7 +32,7 @@ const Calendar = (() => {
     </div>`;
 
     html += '<div class="cal-grid">';
-    const dayHeaders = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const dayHeaders = ['日', '一', '二', '三', '四', '五', '六'];
     dayHeaders.forEach(d => { html += `<div class="cal-day-header">${d}</div>`; });
 
     // Previous month days
@@ -51,7 +51,7 @@ const Calendar = (() => {
       const reminders = ReminderManager.getRemindersByDate(dateStr);
       if (reminders.length > 0) cls += ' has-reminders';
 
-      html += `<div class="${cls}" onclick="Calendar.selectDate('${dateStr}')" title="${reminders.length} reminder(s)">${d}</div>`;
+      html += `<div class="${cls}" onclick="Calendar.selectDate('${dateStr}')" title="${reminders.length} 个提醒">${d}</div>`;
     }
 
     // Next month filler

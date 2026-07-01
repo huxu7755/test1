@@ -9,14 +9,14 @@ const Views = (() => {
 
   /* === View Constants === */
   const VIEWS = [
-    { id: 'today', label: 'Today', icon: 'today', iconClass: 'today', iconText: new Date().getDate().toString() },
-    { id: 'scheduled', label: 'Scheduled', icon: 'scheduled', iconClass: 'scheduled', iconText: '\u{1F4C5}' },
-    { id: 'all', label: 'All', icon: 'all', iconClass: 'all', iconText: '\u{1F4CB}' },
-    { id: 'flagged', label: 'Flagged', icon: 'flagged', iconClass: 'flagged', iconText: '\u{1F6A9}' },
-    { id: 'completed', label: 'Completed', icon: 'completed', iconClass: 'completed', iconText: '\u{2713}' }
+    { id: 'today', label: '今天', icon: 'today', iconClass: 'today', iconText: new Date().getDate().toString() },
+    { id: 'scheduled', label: '计划', icon: 'scheduled', iconClass: 'scheduled', iconText: '\u{1F4C5}' },
+    { id: 'all', label: '全部', icon: 'all', iconClass: 'all', iconText: '\u{1F4CB}' },
+    { id: 'flagged', label: '旗标', icon: 'flagged', iconClass: 'flagged', iconText: '\u{1F6A9}' },
+    { id: 'completed', label: '已完成', icon: 'completed', iconClass: 'completed', iconText: '\u{2713}' }
   ];
 
-  const PRIORITY_LABELS = { 0: 'None', 1: 'Low', 2: 'Medium', 3: 'High' };
+  const PRIORITY_LABELS = { 0: '无', 1: '低', 2: '中', 3: '高' };
   const PRIORITY_CLASSES = { 1: 'low', 2: 'medium', 3: 'high' };
 
   /* === Sidebar Rendering === */
@@ -27,7 +27,7 @@ const Views = (() => {
     const lists = ListManager.getLists();
     const settings = Storage.getSettings();
 
-    let html = '<div class="sidebar-header">iCloud</div>';
+    let html = '<div class="sidebar-header">提醒事项</div>';
     html += '<ul class="view-list">';
 
     VIEWS.forEach(v => {
@@ -42,7 +42,7 @@ const Views = (() => {
     });
 
     html += '</ul>';
-    html += '<div class="sidebar-header">My Lists</div>';
+    html += '<div class="sidebar-header">我的列表</div>';
     html += '<div class="list-section">';
 
     lists.forEach(list => {
@@ -57,7 +57,7 @@ const Views = (() => {
 
     html += '</div>';
     html += `<div class="add-list-btn" onclick="App.showAddListModal()">
-      <span style="font-size:18px;margin-right:10px;color:var(--blue)">+</span> Add List
+      <span style="font-size:18px;margin-right:10px;color:var(--blue)">+</span> 新建列表
     </div>`;
 
     sidebar.innerHTML = html;
@@ -75,16 +75,16 @@ const Views = (() => {
     const header = document.getElementById('main-header');
     if (!header) return;
 
-    let title = 'Reminders';
-    if (currentView === 'today') title = 'Today';
-    else if (currentView === 'scheduled') title = 'Scheduled';
-    else if (currentView === 'all') title = 'All';
-    else if (currentView === 'flagged') title = 'Flagged';
-    else if (currentView === 'completed') title = 'Completed';
+    let title = '提醒事项';
+    if (currentView === 'today') title = '今天';
+    else if (currentView === 'scheduled') title = '计划';
+    else if (currentView === 'all') title = '全部';
+    else if (currentView === 'flagged') title = '旗标';
+    else if (currentView === 'completed') title = '已完成';
     else if (currentView === 'list' && currentListId) {
       const list = ListManager.getList(currentListId);
-      title = list ? list.name : 'List';
-    } else if (currentView === 'recently-deleted') title = 'Recently Deleted';
+      title = list ? list.name : '列表';
+    } else if (currentView === 'recently-deleted') title = '最近删除';
 
     header.innerHTML = `
       <h1>${escapeHtml(title)}</h1>
@@ -102,13 +102,13 @@ const Views = (() => {
     if (!toolbar) return;
 
     const tags = ReminderManager.getAllTags();
-    let tagOptions = '<option value="">All Tags</option>';
+    let tagOptions = '<option value="">全部标签</option>';
     tags.forEach(t => { tagOptions += `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`; });
 
     toolbar.innerHTML = `
-      <input type="search" id="search-input" placeholder="Search" value="${escapeHtml(currentFilters.search)}" oninput="Views.onSearch(this.value)">
+      <input type="search" id="search-input" placeholder="搜索" value="${escapeHtml(currentFilters.search)}" oninput="Views.onSearch(this.value)">
       <select id="priority-filter" onchange="Views.onPriorityFilter(this.value)">
-        <option value="">All Priorities</option>
+        <option value="">全部优先级</option>
         <option value="3" ${currentFilters.priority === '3' ? 'selected' : ''}>High</option>
         <option value="2" ${currentFilters.priority === '2' ? 'selected' : ''}>Medium</option>
         <option value="1" ${currentFilters.priority === '1' ? 'selected' : ''}>Low</option>
@@ -116,7 +116,7 @@ const Views = (() => {
       <select id="tag-filter" onchange="Views.onTagFilter(this.value)">
         ${tagOptions}
       </select>
-      <button class="toolbar-btn" onclick="Views.onToggleFlagged()" title="Filter Flagged" style="color:${currentFilters.flagged ? 'var(--orange)' : 'var(--gray)'}">&#x1F6A9;</button>
+      <button class="toolbar-btn" onclick="Views.onToggleFlagged()" title="筛选旗标" style="color:${currentFilters.flagged ? 'var(--orange)' : 'var(--gray)'}">&#x1F6A9;</button>
     `;
   }
 
@@ -137,7 +137,7 @@ const Views = (() => {
     if (reminders.length === 0) {
       listContainer.innerHTML = `<div class="empty-state">
         <div class="empty-icon">&#x1F4AD;</div>
-        <div>No reminders</div>
+        <div>暂无提醒事项</div>
       </div>`;
       return;
     }
@@ -199,15 +199,15 @@ const Views = (() => {
 
   function renderDeletedList(reminders) {
     if (reminders.length === 0) {
-      return `<div class="empty-state"><div class="empty-icon">&#x1F5D1;</div><div>No recently deleted items</div></div>`;
+      return `<div class="empty-state"><div class="empty-icon">&#x1F5D1;</div><div>暂无最近删除项</div></div>`;
     }
     let html = '<div id="recently-deleted-section">';
     reminders.forEach(r => {
       const daysLeft = Math.max(0, Math.ceil((r.deletedAt + 30 * 24 * 60 * 60 * 1000 - Date.now()) / (24 * 60 * 60 * 1000)));
       html += `<div class="deleted-item">
         <span>${escapeHtml(r.title)}</span>
-        <span class="days-left">${daysLeft}d left</span>
-        <button class="header-btn" onclick="event.stopPropagation();Views.restoreReminder('${r.id}')">Restore</button>
+        <span class="days-left">${daysLeft}天后删除</span>
+        <button class="header-btn" onclick="event.stopPropagation();Views.restoreReminder('${r.id}')">恢复</button>
       </div>`;
     });
     html += '</div>';
@@ -224,7 +224,7 @@ const Views = (() => {
     qa.style.display = 'flex';
     qa.innerHTML = `
       <span class="quick-add-icon">+</span>
-      <input type="text" id="quick-add-input" placeholder="New Reminder" onkeydown="Views.onQuickAdd(event)">
+      <input type="text" id="quick-add-input" placeholder="新建提醒" onkeydown="Views.onQuickAdd(event)">
     `;
   }
 
@@ -251,79 +251,79 @@ const Views = (() => {
       imageSection = `<div class="detail-section">
         <img class="detail-image-preview" src="${r.image}" alt="Attachment">
         <div class="detail-image-actions">
-          <button onclick="Views.removeImage()">Remove Image</button>
+          <button onclick="Views.removeImage()">移除图像</button>
         </div>
       </div>`;
     }
 
     panel.innerHTML = `
       <div class="detail-header">
-        <h2>Details</h2>
-        <button class="detail-close" onclick="Views.closeDetail()">Done</button>
+        <h2>详细信息</h2>
+        <button class="detail-close" onclick="Views.closeDetail()">完成</button>
       </div>
       <div class="detail-section">
         <div class="detail-field">
-          <input type="text" value="${escapeHtml(r.title)}" id="detail-title" placeholder="Title" onchange="Views.updateDetailField('title', this.value)">
+          <input type="text" value="${escapeHtml(r.title)}" id="detail-title" placeholder="标题" onchange="Views.updateDetailField('title', this.value)">
         </div>
         <div class="detail-field">
-          <textarea id="detail-notes" placeholder="Notes" onchange="Views.updateDetailField('notes', this.value)">${escapeHtml(r.notes)}</textarea>
+          <textarea id="detail-notes" placeholder="备注" onchange="Views.updateDetailField('notes', this.value)">${escapeHtml(r.notes)}</textarea>
         </div>
         <div class="detail-field">
-          <input type="url" value="${escapeHtml(r.url)}" id="detail-url" placeholder="URL" onchange="Views.updateDetailField('url', this.value)">
+          <input type="url" value="${escapeHtml(r.url)}" id="detail-url" placeholder="链接" onchange="Views.updateDetailField('url', this.value)">
         </div>
       </div>
       <div class="detail-section">
-        <h3>Organization</h3>
+        <h3>组织</h3>
         <div class="detail-field">
-          <label>List</label>
+          <label>列表</label>
           <select id="detail-list" onchange="Views.updateDetailField('listId', this.value)">${listOptions}</select>
         </div>
         <div class="detail-field">
-          <label>Priority</label>
+          <label>优先级</label>
           <select id="detail-priority" onchange="Views.updateDetailField('priority', parseInt(this.value))">${priorityOptions}</select>
         </div>
         <div class="detail-field">
-          <label>Flag</label>
+          <label>旗标</label>
           <div class="toggle-switch ${r.isFlagged ? 'on' : ''}" id="detail-flag" onclick="Views.toggleDetailFlag()"></div>
         </div>
       </div>
       <div class="detail-section">
-        <h3>Date & Time</h3>
+        <h3>日期与时间</h3>
         <div class="detail-field">
-          <label>Date</label>
+          <label>日期</label>
           <input type="date" value="${r.dueDate}" id="detail-date" onchange="Views.updateDetailField('dueDate', this.value)">
         </div>
         <div class="detail-field">
-          <label>Time</label>
+          <label>时间</label>
           <input type="time" value="${r.dueTime}" id="detail-time" onchange="Views.updateDetailField('dueTime', this.value)">
         </div>
       </div>
       <div class="detail-section">
-        <h3>Tags</h3>
+        <h3>标签</h3>
         <div class="detail-tags-input" id="detail-tags-container">
           ${r.tags.map(t => `<span class="tag-chip">${escapeHtml(t)}<span class="remove-tag" onclick="Views.removeTag('${escapeHtml(t)}')">&times;</span></span>`).join('')}
-          <input type="text" id="detail-tag-input" placeholder="Add tag..." onkeydown="Views.onTagKeydown(event)">
+          <input type="text" id="detail-tag-input" placeholder="添加标签..." onkeydown="Views.onTagKeydown(event)">
         </div>
       </div>
       <div class="detail-section">
-        <h3>Location & People</h3>
+        <h3>位置与人物</h3>
         <div class="detail-toggle">
-          <span>Location Reminder</span>
+          <span>位置提醒</span>
           <div class="toggle-switch ${r.hasLocation ? 'on' : ''}" id="detail-location" onclick="Views.toggleDetailLocation()"></div>
         </div>
         <div class="detail-toggle">
-          <span>When Messaging</span>
+          <span>发信息时</span>
           <div class="toggle-switch ${r.hasMessaging ? 'on' : ''}" id="detail-messaging" onclick="Views.toggleDetailMessaging()"></div>
         </div>
       </div>
       <div class="detail-section">
-        <h3>Image</h3>
+        <h3>图像</h3>
         ${imageSection}
         <button class="header-btn" onclick="Views.addImage()" style="display:block;width:100%;margin-top:8px">
-          ${r.image ? 'Change Image' : 'Add Image'}
+          ${r.image ? '更换图像' : '添加图像'}
         </button>
       </div>
-      <button class="detail-delete-btn" onclick="Views.deleteCurrentReminder()">Delete Reminder</button>
+      <button class="detail-delete-btn" onclick="Views.deleteCurrentReminder()">删除提醒</button>
     `;
 
     panel.classList.add('open');
@@ -539,18 +539,18 @@ const Views = (() => {
     const trashCount = ReminderManager.getRecentlyDeleted().length;
 
     panel.innerHTML = `
-      <h2>Settings <button class="detail-close" onclick="Views.hideSettings()">Done</button></h2>
+      <h2>设置 <button class="detail-close" onclick="Views.hideSettings()">完成</button></h2>
       <div class="settings-section">
-        <h3>Data</h3>
-        <button class="settings-btn" onclick="Backup.showExportDialog();Views.hideSettings()">Export Backup (JSON)</button>
-        <button class="settings-btn" onclick="Backup.showImportDialog();Views.hideSettings()">Import Backup</button>
-        <button class="settings-btn" onclick="Views.switchView('recently-deleted');Views.hideSettings()">Recently Deleted (${trashCount})</button>
-        ${currentListId ? `<button class="settings-btn danger" onclick="Views.clearCompletedInList()">Clear Completed in List</button>` : ''}
-        ${currentListId ? `<button class="settings-btn danger" onclick="Views.deleteCurrentList()">Delete List</button>` : ''}
+        <h3>数据</h3>
+        <button class="settings-btn" onclick="Backup.showExportDialog();Views.hideSettings()">导出备份 (JSON)</button>
+        <button class="settings-btn" onclick="Backup.showImportDialog();Views.hideSettings()">导入备份</button>
+        <button class="settings-btn" onclick="Views.switchView('recently-deleted');Views.hideSettings()">最近删除 (${trashCount})</button>
+        ${currentListId ? `<button class="settings-btn danger" onclick="Views.clearCompletedInList()">清除列表中的已完成</button>` : ''}
+        ${currentListId ? `<button class="settings-btn danger" onclick="Views.deleteCurrentList()">删除列表</button>` : ''}
       </div>
       <div class="settings-section">
-        <h3>About</h3>
-        <p style="font-size:13px;color:var(--text-secondary)">iOS Reminders Clone v1.0<br>PWA-enabled • Local storage<br>No data leaves your device</p>
+        <h3>关于</h3>
+        <p style="font-size:13px;color:var(--text-secondary)">iOS 提醒事项克隆版 v1.0<br>支持 PWA • 本地存储<br>数据不会离开您的设备</p>
       </div>
     `;
     panel.classList.add('open');
@@ -573,7 +573,7 @@ const Views = (() => {
     if (!currentListId) return;
     const list = ListManager.getList(currentListId);
     if (!list) return;
-    if (confirm(`Delete list "${list.name}" and all its reminders?`)) {
+    if (confirm(`确定删除列表 "${list.name}" 及其所有提醒事项？`)) {
       ListManager.deleteList(currentListId);
       currentListId = null;
       currentView = 'all';
@@ -593,12 +593,12 @@ const Views = (() => {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      if (date.toDateString() === today.toDateString()) return 'Today';
-      if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
+      if (date.toDateString() === today.toDateString()) return '今天';
+      if (date.toDateString() === tomorrow.toDateString()) return '明天';
 
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
+      const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+      const days = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+      return `${months[date.getMonth()]}${date.getDate()}日 ${days[date.getDay()]}`;
     } catch (e) { return dateStr; }
   }
 
@@ -607,7 +607,7 @@ const Views = (() => {
     try {
       const [h, m] = timeStr.split(':');
       const hour = parseInt(h);
-      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const ampm = hour >= 12 ? '下午' : '上午';
       const h12 = hour % 12 || 12;
       return `${h12}:${m} ${ampm}`;
     } catch (e) { return timeStr; }

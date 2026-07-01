@@ -8,14 +8,14 @@ const Storage = (() => {
 
   const defaultData = {
     lists: [
-      { id: 'list_1', name: 'Reminders', color: '#ff9500', icon: 'list', order: 0 },
-      { id: 'list_2', name: 'Work', color: '#007aff', icon: 'briefcase', order: 1 },
-      { id: 'list_3', name: 'Personal', color: '#34c759', icon: 'person', order: 2 }
+      { id: 'list_1', name: '提醒', color: '#ff9500', icon: 'list', order: 0 },
+      { id: 'list_2', name: '工作', color: '#007aff', icon: 'briefcase', order: 1 },
+      { id: 'list_3', name: '个人', color: '#34c759', icon: 'person', order: 2 }
     ],
     reminders: [
-      { id: 'rem_1', listId: 'list_1', title: 'Buy groceries', notes: 'Milk, eggs, bread', url: '', dueDate: '', dueTime: '', isFlagged: true, priority: 1, tags: ['shopping'], image: null, hasLocation: false, hasMessaging: false, completed: false, completedAt: null, createdAt: Date.now(), order: 0 },
-      { id: 'rem_2', listId: 'list_2', title: 'Finish quarterly report', notes: 'Due by Friday', url: 'https://docs.example.com', dueDate: '2026-06-30', dueTime: '17:00', isFlagged: false, priority: 2, tags: ['work', 'urgent'], image: null, hasLocation: false, hasMessaging: true, completed: false, completedAt: null, createdAt: Date.now() - 86400000, order: 1 },
-      { id: 'rem_3', listId: 'list_1', title: 'Call dentist', notes: '', url: '', dueDate: '2026-07-03', dueTime: '10:00', isFlagged: false, priority: 1, tags: ['health'], image: null, hasLocation: false, hasMessaging: false, completed: false, completedAt: null, createdAt: Date.now() - 172800000, order: 2 }
+      { id: 'rem_1', listId: 'list_1', title: '购买杂货', notes: '牛奶、鸡蛋、面包', url: '', dueDate: '', dueTime: '', isFlagged: true, priority: 1, tags: ['shopping'], image: null, hasLocation: false, hasMessaging: false, completed: false, completedAt: null, createdAt: Date.now(), order: 0 },
+      { id: 'rem_2', listId: 'list_2', title: '完成季度报告', notes: '周五前截止', url: 'https://docs.example.com', dueDate: '2026-06-30', dueTime: '17:00', isFlagged: false, priority: 2, tags: ['work', 'urgent'], image: null, hasLocation: false, hasMessaging: true, completed: false, completedAt: null, createdAt: Date.now() - 86400000, order: 1 },
+      { id: 'rem_3', listId: 'list_1', title: '给牙医打电话', notes: '', url: '', dueDate: '2026-07-03', dueTime: '10:00', isFlagged: false, priority: 1, tags: ['health'], image: null, hasLocation: false, hasMessaging: false, completed: false, completedAt: null, createdAt: Date.now() - 172800000, order: 2 }
     ]
   };
 

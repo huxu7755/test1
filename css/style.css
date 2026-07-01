@@ -29,16 +29,20 @@
   --toolbar-height: 44px;
 }
 
+html { font-size: 16px; }
+
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', sans-serif;
   background: var(--bg);
   color: var(--text);
   height: 100vh;
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 #app { display: flex; height: 100vh; }
@@ -273,6 +277,8 @@ body {
 .reminder-item .reminder-title {
   font-size: 15px;
   line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .reminder-item .reminder-subtitle {
@@ -738,9 +744,101 @@ body {
   font-size: 12px;
 }
 
+/* ===== Mobile Responsive ===== */
 @media (max-width: 768px) {
-  #sidebar { width: 260px; min-width: 260px; }
-  #detail-panel, #settings-panel { width: 100%; right: -100%; }
+  /* Touch targets */
+  button, .clickable,
+  #sidebar .view-list li,
+  #sidebar .list-item,
+  #sidebar .add-list-btn,
+  #detail-panel .detail-toggle,
+  #detail-panel .detail-field,
+  #settings-panel .settings-btn,
+  #modal-overlay .modal-content .modal-actions button,
+  .reminder-item {
+    min-height: 44px;
+  }
+
+  /* Sidebar: full-width overlay on mobile */
+  #sidebar {
+    width: 100%;
+    min-width: 100%;
+    position: fixed;
+    top: 0;
+    left: -100%;
+    height: 100vh;
+    z-index: 150;
+    transition: left 0.3s ease;
+  }
+  #sidebar.open { left: 0; }
+
+  /* Main content */
+  #main-content {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  /* Detail & Settings panels: full width */
+  #detail-panel, #settings-panel {
+    width: 100%;
+    right: -100%;
+  }
+
+  /* Modal: bottom sheet on mobile */
+  #modal-overlay {
+    align-items: flex-end;
+  }
+  #modal-overlay .modal-content {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+    margin: 0;
+    padding: 20px 16px;
+    max-height: 85vh;
+  }
+
+  /* Header */
+  #main-header { padding: 8px 12px; }
+  #main-header h1 { font-size: 18px; }
+
+  /* Toolbar */
+  #toolbar { padding: 6px 12px; gap: 8px; flex-wrap: wrap; }
+  #toolbar input[type="search"] { font-size: 16px; }
+  #toolbar select { font-size: 14px; }
+
+  /* Reminder items */
+  .reminder-item { padding: 12px 12px; }
+  .reminder-item .reminder-title { font-size: 16px; }
+  .reminder-item .reminder-subtitle { font-size: 13px; }
+  .reminder-item .reminder-badges { margin-left: 4px; }
+
+  /* Detail panel fields */
+  #detail-panel .detail-field label { width: 72px; font-size: 13px; }
+  #detail-panel .detail-field input,
+  #detail-panel .detail-field textarea,
+  #detail-panel .detail-field select { font-size: 16px; }
+
+  /* Settings */
+  #settings-panel { padding: 12px; }
+  #settings-panel h2 { font-size: 18px; }
+
+  /* Calendar */
+  #calendar-section { padding: 8px 12px; }
+  #calendar-section .cal-day {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  /* Quick add */
+  #quick-add { padding: 8px 12px; }
+  #quick-add input { font-size: 16px; }
+
+  /* Prevent iOS zoom on input focus */
+  input[type="text"],
+  input[type="search"],
+  textarea,
+  select { font-size: 16px !important; }
 }
 
 .backup-textarea {

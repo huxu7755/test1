@@ -41,14 +41,14 @@ const Backup = (() => {
     const overlay = document.getElementById('modal-overlay');
     overlay.innerHTML = `
       <div class="modal-content">
-        <h2>Export Backup</h2>
+        <h2>导出备份</h2>
         <div class="form-group">
-          <label>Copy this JSON text to save your data:</label>
+          <label>复制以下 JSON 文本以保存数据：</label>
           <textarea class="backup-textarea" readonly>${escapeHtml(json)}</textarea>
         </div>
         <div class="modal-actions">
-          <button class="btn-primary" onclick="Backup.exportToFile();document.getElementById('modal-overlay').classList.remove('open')">Download JSON File</button>
-          <button class="btn-secondary" onclick="document.getElementById('modal-overlay').classList.remove('open')">Close</button>
+          <button class="btn-primary" onclick="Backup.exportToFile();document.getElementById('modal-overlay').classList.remove('open')">下载 JSON 文件</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-overlay').classList.remove('open')">关闭</button>
         </div>
       </div>
     `;
@@ -59,19 +59,19 @@ const Backup = (() => {
     const overlay = document.getElementById('modal-overlay');
     overlay.innerHTML = `
       <div class="modal-content">
-        <h2>Import Backup</h2>
+        <h2>导入备份</h2>
         <div class="form-group">
-          <label>Choose a backup file:</label>
+          <label>选择备份文件：</label>
           <input type="file" id="import-file-input" accept=".json" style="width:100%">
         </div>
-        <p style="text-align:center;color:var(--text-secondary);margin:8px 0">or paste JSON:</p>
+        <p style="text-align:center;color:var(--text-secondary);margin:8px 0">或粘贴 JSON：</p>
         <div class="form-group">
-          <textarea class="backup-textarea" id="import-textarea" placeholder="Paste backup JSON here..."></textarea>
+          <textarea class="backup-textarea" id="import-textarea" placeholder="在此粘贴备份 JSON..."></textarea>
         </div>
         <div class="modal-actions">
-          <button class="btn-primary" onclick="Backup.doImportText()">Import from Text</button>
-          <button class="btn-primary" onclick="Backup.doImportFile()">Import from File</button>
-          <button class="btn-secondary" onclick="document.getElementById('modal-overlay').classList.remove('open')">Cancel</button>
+          <button class="btn-primary" onclick="Backup.doImportText()">从文本导入</button>
+          <button class="btn-primary" onclick="Backup.doImportFile()">从文件导入</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-overlay').classList.remove('open')">取消</button>
         </div>
       </div>
     `;
@@ -81,7 +81,7 @@ const Backup = (() => {
   function doImportText() {
     const textarea = document.getElementById('import-textarea');
     if (!textarea || !textarea.value.trim()) {
-      alert('Please paste JSON data first.');
+      alert('请先粘贴 JSON 数据。');
       return;
     }
     const success = importFromText(textarea.value);
@@ -89,16 +89,16 @@ const Backup = (() => {
       document.getElementById('modal-overlay').classList.remove('open');
       Views.refresh();
       Views.renderSidebar();
-      alert('Data imported successfully!');
+      alert('数据导入成功！');
     } else {
-      alert('Invalid backup data. Please check the JSON format.');
+      alert('无效的备份数据，请检查 JSON 格式。');
     }
   }
 
   function doImportFile() {
     const input = document.getElementById('import-file-input');
     if (!input || !input.files[0]) {
-      alert('Please select a file first.');
+      alert('请先选择文件。');
       return;
     }
     importFromFile(input.files[0]).then(success => {
@@ -106,12 +106,12 @@ const Backup = (() => {
         document.getElementById('modal-overlay').classList.remove('open');
         Views.refresh();
         Views.renderSidebar();
-        alert('Data imported successfully!');
+        alert('数据导入成功！');
       } else {
-        alert('Invalid backup file.');
+        alert('无效的备份文件。');
       }
     }).catch(() => {
-      alert('Failed to read file.');
+      alert('读取文件失败。');
     });
   }
 

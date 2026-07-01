@@ -73,18 +73,18 @@ const App = (() => {
 
     overlay.innerHTML = `
       <div class="modal-content">
-        <h2>New List</h2>
+        <h2>新建列表</h2>
         <div class="form-group">
-          <label>Name</label>
-          <input type="text" id="new-list-name" placeholder="List name" autofocus>
+          <label>名称</label>
+          <input type="text" id="new-list-name" placeholder="列表名称" autofocus>
         </div>
         <div class="form-group">
-          <label>Color</label>
+          <label>颜色</label>
           <div class="color-picker">${colorDots}</div>
         </div>
         <div class="modal-actions">
-          <button class="btn-secondary" onclick="document.getElementById('modal-overlay').classList.remove('open')">Cancel</button>
-          <button class="btn-primary" onclick="App.createList()">Create</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-overlay').classList.remove('open')">取消</button>
+          <button class="btn-primary" onclick="App.createList()">创建</button>
         </div>
       </div>
     `;
@@ -109,19 +109,19 @@ const App = (() => {
 
     overlay.innerHTML = `
       <div class="modal-content">
-        <h2>Edit List</h2>
+        <h2>编辑列表</h2>
         <div class="form-group">
-          <label>Name</label>
+          <label>名称</label>
           <input type="text" id="edit-list-name" value="${Views.escapeHtml(list.name)}" autofocus>
         </div>
         <div class="form-group">
-          <label>Color</label>
+          <label>颜色</label>
           <div class="color-picker">${colorDots}</div>
         </div>
         <div class="modal-actions">
-          <button class="btn-danger" onclick="App.deleteListConfirm('${listId}')">Delete List</button>
-          <button class="btn-secondary" onclick="document.getElementById('modal-overlay').classList.remove('open')">Cancel</button>
-          <button class="btn-primary" onclick="App.updateList('${listId}')">Save</button>
+          <button class="btn-danger" onclick="App.deleteListConfirm('${listId}')">删除列表</button>
+          <button class="btn-secondary" onclick="document.getElementById('modal-overlay').classList.remove('open')">取消</button>
+          <button class="btn-primary" onclick="App.updateList('${listId}')">保存</button>
         </div>
       </div>
     `;
@@ -140,7 +140,7 @@ const App = (() => {
   }
 
   function createList() {
-    const name = document.getElementById('new-list-name')?.value.trim() || 'New List';
+    const name = document.getElementById('new-list-name')?.value.trim() || '新建列表';
     const color = getSelectedColor();
     ListManager.createList(name, color, 'list');
     document.getElementById('modal-overlay').classList.remove('open');
@@ -160,7 +160,7 @@ const App = (() => {
   function deleteListConfirm(listId) {
     const list = ListManager.getList(listId);
     if (!list) return;
-    if (confirm(`Permanently delete list "${list.name}"?`)) {
+    if (confirm(`确定要永久删除列表 "${list.name}" 吗？`)) {
       ListManager.deleteList(listId);
       document.getElementById('modal-overlay').classList.remove('open');
       Views.renderSidebar();

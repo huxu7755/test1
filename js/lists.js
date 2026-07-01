@@ -21,7 +21,7 @@ const ListManager = (() => {
     const data = Storage.load();
     const list = {
       id: Storage.generateId('list'),
-      name: name || 'New List',
+      name: name || '新建列表',
       color: color || LIST_COLORS[Math.floor(Math.random() * LIST_COLORS.length)],
       icon: icon || 'list',
       order: data.lists.length
