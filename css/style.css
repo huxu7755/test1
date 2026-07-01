@@ -798,6 +798,18 @@ body {
     max-height: 85vh;
   }
 
+  /* New Reminder Modal: bottom sheet on mobile */
+  #new-reminder-modal {
+    align-items: flex-end;
+  }
+  #new-reminder-modal .modal-content {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+    margin: 0;
+    max-height: 85vh;
+  }
+
   /* Header */
   #main-header { padding: 8px 12px; }
   #main-header h1 { font-size: 18px; }
@@ -949,6 +961,18 @@ body {
 }
 
 /* ===== Full New Reminder Modal ===== */
+#new-reminder-modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+#new-reminder-modal.open { display: flex; }
+
 #new-reminder-modal .modal-content {
   width: 400px;
   max-width: 100%;

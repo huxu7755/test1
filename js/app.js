@@ -48,7 +48,11 @@ const App = (() => {
       if (e.key === 'Escape') {
         Views.closeDetail();
         Views.hideSettings();
-        document.getElementById('modal-overlay').classList.remove('open');
+        const modal = document.querySelector('#modal-overlay.open, #new-reminder-modal.open');
+        if (modal) {
+          modal.classList.remove('open');
+          if (modal.id === 'new-reminder-modal') modal.id = 'modal-overlay';
+        }
         closeSidebar();
         if (contextMenuEl) { contextMenuEl.remove(); contextMenuEl = null; }
       }

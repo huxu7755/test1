@@ -727,8 +727,11 @@ const Views = (() => {
     }
 
     nrmImageData = null;
-    document.getElementById('modal-overlay').classList.remove('open');
-    document.getElementById('modal-overlay').id = 'modal-overlay';
+    const overlay = document.getElementById('new-reminder-modal');
+    if (overlay) {
+      overlay.classList.remove('open');
+      overlay.id = 'modal-overlay';
+    }
     refresh();
     renderSidebar();
   }
