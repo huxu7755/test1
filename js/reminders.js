@@ -1,189 +1,219 @@
-/* reminders.js - Reminder CRUD operations */
+/* reminders.js - Reminder CRUD and queries */
 
 const ReminderManager = (() => {
+  let reminders = [];
+  let deletedReminders = []; // Soft-delete: stored for 30 days
+
+  function loadData(data) {
+    reminders = data.reminders || [];
+    deletedReminders = data.deletedReminders || [];
+    // Clean expired soft-deletes (older than 30 days)
+    const now = Date.now();
+    deletedReminders = deletedReminders.filter(r => now - r.deletedAt < 30 * 24 * 60 * 60 * 1000);
+  }
+
+  function save() {
+    Storage.updateReminders(reminders, deletedReminders);
+  }
+
   function getReminders(listId) {
-    const data = Storage.load();
-    const reminders = listId
-      ? data.reminders.filter(r => r.listId === listId && !r.completed)
-      : data.reminders.filter(r => !r.completed);
-    return reminders.sort((a, b) => a.order - b.order);
+    return reminders.filter(r => r.listId === listId && !r.completed);
   }
 
   function getReminder(id) {
-    const data = Storage.load();
-    return data.reminders.find(r => r.id === id) || null;
+    return reminders.find(r => r.id === id) || null;
   }
 
-  function createReminder(listId, title) {
-    const data = Storage.load();
-    const reminders = data.reminders.filter(r => r.listId === listId);
-    const reminder = {
-      id: Storage.generateId('rem'),
+  function getAllReminders() {
+    return reminders.filter(r => !r.completed);
+  }
+
+  function getTodaysReminders() {
+    const today = formatDateStr(new Date());
+    return reminders.filter(r => !r.completed && r.dueDate === today);
+  }
+
+  function getScheduledReminders() {
+    return reminders.filter(r => !r.completed && r.dueDate).sort((a, b) => {
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+      return a.dueDate.localeCompare(b.dueDate) || (a.dueTime || '').localeCompare(b.dueTime || '');
+    });
+  }
+
+  function getFlaggedReminders() {
+    return reminders.filter(r => !r.completed && r.isFlagged);
+  }
+
+  function getCompletedReminders(listId) {
+    if (listId === null || listId === undefined) {
+      return reminders.filter(r => r.completed);
+    }
+    return reminders.filter(r => r.completed && r.listId === listId);
+  }
+
+  function getRecentlyDeleted() {
+    return [...deletedReminders].sort((a, b) => b.deletedAt - a.deletedAt);
+  }
+
+  function getAllTags() {
+    const tagSet = new Set();
+    reminders.filter(r => !r.completed).forEach(r => {
+      if (r.tags) r.tags.forEach(t => tagSet.add(t));
+    });
+    return [...tagSet].sort();
+  }
+
+  function getViewCounts() {
+    const today = formatDateStr(new Date());
+    const allActive = reminders.filter(r => !r.completed);
+    const todays = allActive.filter(r => r.dueDate === today);
+    const scheduled = allActive.filter(r => r.dueDate);
+    const flagged = allActive.filter(r => r.isFlagged);
+    const completed = reminders.filter(r => r.completed);
+
+    return {
+      today: todays.length,
+      scheduled: scheduled.length,
+      all: allActive.length,
+      flagged: flagged.length,
+      completed: completed.length
+    };
+  }
+
+  function createReminder(listId, title, extraFields) {
+    const now = Date.now();
+    const r = {
+      id: 'rem_' + now + '_' + Math.random().toString(36).substr(2, 6),
       listId,
-      title: title || 'New Reminder',
+      title,
       notes: '',
       url: '',
       dueDate: '',
       dueTime: '',
       isFlagged: false,
-      priority: 0, /* 0=none, 1=low, 2=medium, 3=high */
+      priority: 0,
       tags: [],
-      image: null,
-      hasLocation: false,
-      hasMessaging: false,
       completed: false,
       completedAt: null,
-      createdAt: Date.now(),
-      order: reminders.length
+      hasLocation: false,
+      locationAddress: '',
+      hasMessaging: false,
+      image: null,
+      createdAt: now,
+      updatedAt: now,
+      ...extraFields
     };
-    data.reminders.push(reminder);
-    Storage.save(data);
-    return reminder;
+    reminders.push(r);
+    save();
+    return r.id;
   }
 
-  function updateReminder(id, updates) {
-    const data = Storage.load();
-    const reminder = data.reminders.find(r => r.id === id);
-    if (!reminder) return null;
-    Object.assign(reminder, updates);
-    if (updates.completed === true) reminder.completedAt = Date.now();
-    if (updates.completed === false) reminder.completedAt = null;
-    Storage.save(data);
-    return reminder;
+  function updateReminder(id, fields) {
+    const r = reminders.find(r => r.id === id);
+    if (!r) return null;
+    Object.assign(r, fields, { updatedAt: Date.now() });
+    save();
+    return r;
   }
 
   function toggleComplete(id) {
-    const r = getReminder(id);
+    const r = reminders.find(r => r.id === id);
     if (!r) return null;
-    return updateReminder(id, { completed: !r.completed, completedAt: r.completed ? null : Date.now() });
+    if (r.completed) {
+      r.completed = false;
+      r.completedAt = null;
+    } else {
+      r.completed = true;
+      r.completedAt = Date.now();
+    }
+    r.updatedAt = Date.now();
+    save();
+    return r;
   }
 
   function toggleFlag(id) {
-    const r = getReminder(id);
+    const r = reminders.find(r => r.id === id);
     if (!r) return null;
-    return updateReminder(id, { isFlagged: !r.isFlagged });
+    r.isFlagged = !r.isFlagged;
+    r.updatedAt = Date.now();
+    save();
+    return r;
   }
 
   function deleteReminder(id) {
-    const data = Storage.load();
-    const reminder = data.reminders.find(r => r.id === id);
-    if (!reminder) return false;
-    Storage.moveToTrash(reminder);
-    data.reminders = data.reminders.filter(r => r.id !== id);
-    Storage.save(data);
+    const idx = reminders.findIndex(r => r.id === id);
+    if (idx === -1) return false;
+    const [deleted] = reminders.splice(idx, 1);
+    deleted.deletedAt = Date.now();
+    deletedReminders.push(deleted);
+    save();
     return true;
   }
 
-  function getTodaysReminders() {
-    const today = new Date().toISOString().split('T')[0];
-    const data = Storage.load();
-    return data.reminders.filter(r => r.dueDate === today && !r.completed)
-      .sort((a, b) => (a.dueTime || '').localeCompare(b.dueTime || ''));
-  }
-
-  function getScheduledReminders() {
-    const data = Storage.load();
-    return data.reminders.filter(r => r.dueDate && !r.completed)
-      .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || (a.dueTime || '').localeCompare(b.dueTime || ''));
-  }
-
-  function getAllReminders() {
-    const data = Storage.load();
-    return data.reminders.filter(r => !r.completed).sort((a, b) => a.order - b.order);
-  }
-
-  function getFlaggedReminders() {
-    const data = Storage.load();
-    return data.reminders.filter(r => r.isFlagged && !r.completed)
-      .sort((a, b) => a.order - b.order);
-  }
-
-  function getCompletedReminders(listId) {
-    const data = Storage.load();
-    return (listId
-      ? data.reminders.filter(r => r.listId === listId && r.completed)
-      : data.reminders.filter(r => r.completed)
-    ).sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
-  }
-
-  function getRemindersByDate(dateStr) {
-    const data = Storage.load();
-    return data.reminders.filter(r => r.dueDate === dateStr);
-  }
-
-  function searchReminders(query, listId) {
-    const q = query.toLowerCase();
-    const data = Storage.load();
-    let results = data.reminders;
-    if (listId) results = results.filter(r => r.listId === listId);
-    return results.filter(r => {
-      return r.title.toLowerCase().includes(q) ||
-        r.notes.toLowerCase().includes(q) ||
-        r.url.toLowerCase().includes(q) ||
-        r.tags.some(t => t.toLowerCase().includes(q));
-    });
-  }
-
-  function filterReminders(listId, filters) {
-    let reminders = getReminders(listId);
-    if (filters.search) {
-      reminders = searchReminders(filters.search, listId);
-    }
-    if (filters.priority !== undefined && filters.priority !== '') {
-      reminders = reminders.filter(r => r.priority === parseInt(filters.priority));
-    }
-    if (filters.flagged) {
-      reminders = reminders.filter(r => r.isFlagged);
-    }
-    if (filters.tag) {
-      reminders = reminders.filter(r => r.tags.includes(filters.tag));
-    }
-    if (filters.dateFrom) {
-      reminders = reminders.filter(r => r.dueDate >= filters.dateFrom);
-    }
-    return reminders;
-  }
-
-  function getAllTags() {
-    const data = Storage.load();
-    const tagSet = new Set();
-    data.reminders.forEach(r => r.tags.forEach(t => tagSet.add(t)));
-    return Array.from(tagSet).sort();
-  }
-
-  function getRecentlyDeleted() {
-    const trash = Storage.getTrash();
-    const now = Date.now();
-    return trash.filter(item => (now - item.deletedAt) < (30 * 24 * 60 * 60 * 1000));
-  }
-
   function restoreReminder(id) {
-    const restored = Storage.restoreFromTrash(id);
-    if (!restored) return null;
-    const data = Storage.load();
-    const { deletedAt, ...clean } = restored;
-    data.reminders.push(clean);
-    Storage.save(data);
-    return clean;
+    const idx = deletedReminders.findIndex(r => r.id === id);
+    if (idx === -1) return false;
+    const [restored] = deletedReminders.splice(idx, 1);
+    restored.deletedAt = null;
+    restored.updatedAt = Date.now();
+    reminders.push(restored);
+    save();
+    return true;
+  }
+
+  function permanentlyDeleteReminder(id) {
+    deletedReminders = deletedReminders.filter(r => r.id !== id);
+    save();
+  }
+
+  function deleteRemindersByList(listId) {
+    const toDelete = reminders.filter(r => r.listId === listId);
+    reminders = reminders.filter(r => r.listId !== listId);
+    toDelete.forEach(r => {
+      r.deletedAt = Date.now();
+    });
+    deletedReminders.push(...toDelete);
+    save();
   }
 
   function clearCompleted(listId) {
-    const data = Storage.load();
-    const completed = listId
-      ? data.reminders.filter(r => r.listId === listId && r.completed)
-      : data.reminders.filter(r => r.completed);
-    completed.forEach(r => Storage.moveToTrash(r));
-    data.reminders = data.reminders.filter(r => !completed.includes(r));
-    Storage.save(data);
-    return completed.length;
+    if (listId) {
+      const toDelete = reminders.filter(r => r.listId === listId && r.completed);
+      reminders = reminders.filter(r => !(r.listId === listId && r.completed));
+      toDelete.forEach(r => {
+        r.deletedAt = Date.now();
+      });
+      deletedReminders.push(...toDelete);
+    } else {
+      const toDelete = reminders.filter(r => r.completed);
+      reminders = reminders.filter(r => !r.completed);
+      toDelete.forEach(r => {
+        r.deletedAt = Date.now();
+      });
+      deletedReminders.push(...toDelete);
+    }
+    save();
+  }
+
+  function formatDateStr(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function getRemindersByDate(dateStr) {
+    return reminders.filter(r => !r.completed && r.dueDate === dateStr);
   }
 
   return {
-    getReminders, getReminder, createReminder, updateReminder,
-    toggleComplete, toggleFlag, deleteReminder,
-    getTodaysReminders, getScheduledReminders, getAllReminders,
-    getFlaggedReminders, getCompletedReminders, getRemindersByDate,
-    searchReminders, filterReminders, getAllTags,
-    getRecentlyDeleted, restoreReminder, clearCompleted
+    loadData, getReminders, getReminder, getAllReminders,
+    getTodaysReminders, getScheduledReminders, getFlaggedReminders, getCompletedReminders,
+    getRecentlyDeleted, getAllTags, getViewCounts, getRemindersByDate,
+    createReminder, updateReminder, toggleComplete, toggleFlag,
+    deleteReminder, restoreReminder, permanentlyDeleteReminder,
+    deleteRemindersByList, clearCompleted,
+    save
   };
 })();

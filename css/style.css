@@ -148,11 +148,12 @@ body {
 
 #sidebar .add-list-btn:hover { background: var(--gray5); }
 
-#main {
+#main-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
 #main-header {
@@ -866,3 +867,415 @@ body {
 .priority-dot.high { background: var(--red); height: 16px; }
 .priority-dot.medium { background: var(--orange); }
 .priority-dot.low { background: var(--blue); height: 8px; }
+
+/* ===== Hamburger Button ===== */
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px;
+  margin-right: 8px;
+  color: var(--blue);
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+.hamburger-btn:hover { background: var(--gray5); }
+
+/* ===== Sidebar Overlay (mobile) ===== */
+#sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 140;
+}
+
+/* ===== Quick Cards ===== */
+#quick-cards {
+  padding: 8px 16px;
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.quick-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+.quick-card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 10px 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.quick-card:hover { background: var(--gray5); }
+.quick-card.active { background: var(--blue); }
+.quick-card.active .card-label,
+.quick-card.active .card-count { color: #fff; }
+.quick-card .card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #fff;
+  font-weight: 700;
+}
+.quick-card .card-icon.today { background: #007aff; font-size: 14px; }
+.quick-card .card-icon.scheduled { background: #ff3b30; }
+.quick-card .card-icon.all { background: #5856d6; }
+.quick-card .card-icon.flagged { background: #ff9500; }
+.quick-card .card-icon.completed { background: #8e8e93; }
+.quick-card .card-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.quick-card .card-count {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+/* ===== Full New Reminder Modal ===== */
+#new-reminder-modal .modal-content {
+  width: 400px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 0;
+  border-radius: 14px;
+}
+#new-reminder-modal .modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--separator);
+  position: sticky;
+  top: 0;
+  background: var(--card-bg);
+  z-index: 1;
+}
+#new-reminder-modal .modal-header h2 { font-size: 17px; font-weight: 600; }
+#new-reminder-modal .modal-header .btn-done {
+  background: none;
+  border: none;
+  color: var(--blue);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+#new-reminder-modal .modal-body { padding: 12px 16px; }
+#new-reminder-modal .form-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gray6);
+}
+#new-reminder-modal .form-row label {
+  width: 72px;
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+#new-reminder-modal .form-row input,
+#new-reminder-modal .form-row textarea,
+#new-reminder-modal .form-row select {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  background: transparent;
+  font-family: inherit;
+}
+#new-reminder-modal .form-row textarea {
+  resize: vertical;
+  min-height: 36px;
+}
+#new-reminder-modal .form-section { margin-bottom: 4px; }
+#new-reminder-modal .form-section h3 {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 0 4px;
+  margin: 0;
+}
+#new-reminder-modal .form-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gray6);
+  font-size: 15px;
+}
+#new-reminder-modal .form-toggle .toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#new-reminder-modal .toggle-subfield {
+  padding: 8px 0 8px 16px;
+  border-bottom: 1px solid var(--gray6);
+}
+#new-reminder-modal .toggle-subfield input {
+  width: 100%;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  background: transparent;
+}
+#new-reminder-modal .inline-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  flex: 1;
+}
+#new-reminder-modal .inline-tags .tag-chip {
+  background: var(--blue);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+}
+#new-reminder-modal .inline-tags .tag-chip .remove-tag {
+  margin-left: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+#new-reminder-modal .inline-tags input {
+  border: none;
+  outline: none;
+  font-size: 14px;
+  min-width: 50px;
+  flex: 1;
+}
+
+/* ===== Tag Chips in Toolbar ===== */
+.tag-chips-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px 16px;
+  background: var(--bg);
+  align-items: center;
+  flex-shrink: 0;
+}
+.tag-chips-bar .tag-chip-btn {
+  background: var(--gray5);
+  border: none;
+  border-radius: 12px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--text);
+  transition: background 0.15s;
+}
+.tag-chips-bar .tag-chip-btn:hover { background: var(--gray4); }
+.tag-chips-bar .tag-chip-btn.active { background: var(--blue); color: #fff; }
+.tag-chips-bar .tag-more-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+/* ===== Icon Grid for List Creation ===== */
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.icon-grid .icon-cell {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  border-radius: 8px;
+  background: var(--gray6);
+  transition: background 0.15s;
+}
+.icon-grid .icon-cell:hover { background: var(--gray4); }
+.icon-grid .icon-cell.selected { background: var(--blue); }
+
+/* ===== Swipe to Delete ===== */
+.reminder-item.swipe-container {
+  position: relative;
+  overflow: hidden;
+}
+.reminder-item .swipe-content {
+  position: relative;
+  z-index: 1;
+  background: var(--card-bg);
+  transition: transform 0.2s ease;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+}
+.reminder-item .swipe-delete-btn {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  z-index: 0;
+}
+
+/* ===== Long-Press Context Menu ===== */
+.context-menu {
+  position: fixed;
+  background: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  z-index: 300;
+  overflow: hidden;
+  min-width: 160px;
+}
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  font-size: 15px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--gray6);
+}
+.context-menu-item:last-child { border-bottom: none; }
+.context-menu-item:hover { background: var(--gray5); }
+.context-menu-item.danger { color: var(--red); }
+
+/* ===== Auto-backup & WebDAV ===== */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+.settings-row .settings-label {
+  font-size: 15px;
+  flex: 1;
+}
+.settings-row .settings-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.webdav-section {
+  padding: 12px;
+  background: var(--gray6);
+  border-radius: 8px;
+  margin-top: 8px;
+}
+.webdav-section input {
+  width: 100%;
+  border: 1px solid var(--gray4);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 14px;
+  margin-bottom: 8px;
+  outline: none;
+}
+.webdav-section input:last-child { margin-bottom: 0; }
+
+/* ===== "+" Button for New Reminder ===== */
+#new-reminder-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--card-bg);
+  border-top: 1px solid var(--separator);
+  flex-shrink: 0;
+  cursor: pointer;
+  color: var(--blue);
+  font-size: 15px;
+  border: none;
+  width: 100%;
+  text-align: left;
+}
+#new-reminder-btn:hover { background: var(--gray6); }
+#new-reminder-btn .plus-icon { font-size: 20px; font-weight: 300; }
+
+/* ===== List count badge ===== */
+.sidebar .list-item .list-badge {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--gray5);
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+@media (max-width: 768px) {
+  /* Hamburger visible on mobile */
+  .hamburger-btn { display: flex; }
+
+  /* Sidebar overlay visible on mobile */
+  #sidebar-overlay.open { display: block; }
+
+  /* Quick cards: compact on mobile */
+  #quick-cards { padding: 6px 8px; }
+  .quick-cards-grid { gap: 4px; }
+  .quick-card { padding: 8px 4px; border-radius: 10px; }
+  .quick-card .card-icon { width: 28px; height: 28px; font-size: 16px; }
+  .quick-card .card-label { font-size: 11px; }
+  .quick-card .card-count { font-size: 15px; }
+
+  /* New reminder modal: full-screen bottom sheet */
+  #new-reminder-modal .modal-content {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+    max-height: 92vh;
+  }
+
+  /* Swipe delete */
+  .reminder-item .swipe-content { padding: 10px 12px; }
+
+  /* Context menu */
+  .context-menu { min-width: 140px; border-radius: 10px; }
+  .context-menu-item { padding: 14px 16px; font-size: 16px; }
+
+  /* Icon grid on mobile */
+  .icon-grid { grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .icon-grid .icon-cell { width: 40px; height: 40px; font-size: 22px; }
+
+  /* New reminder button */
+  #new-reminder-btn { padding: 12px 16px; font-size: 16px; }
+
+  /* Tag chips bar */
+  .tag-chips-bar { padding: 6px 8px; }
+}

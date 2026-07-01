@@ -12,12 +12,19 @@
 </head>
 <body>
   <div id="app">
+    <!-- Sidebar Overlay (mobile) -->
+    <div id="sidebar-overlay" onclick="App.closeSidebar()"></div>
+
     <!-- Sidebar -->
     <nav id="sidebar"></nav>
 
     <!-- Main Content -->
     <main id="main-content">
-      <div id="main-header"></div>
+      <div id="main-header">
+        <button class="hamburger-btn" onclick="App.toggleSidebar()" aria-label="菜单">&#9776;</button>
+        <h1 id="header-title">今天</h1>
+        <div class="header-actions" id="header-actions"></div>
+      </div>
 
       <!-- Calendar -->
       <section id="calendar-section"></section>
@@ -25,11 +32,19 @@
       <!-- Toolbar -->
       <div id="toolbar"></div>
 
+      <!-- Tag Chips Bar -->
+      <div id="tag-chips-bar" class="tag-chips-bar" style="display:none"></div>
+
+      <!-- Quick Cards -->
+      <div id="quick-cards"></div>
+
       <!-- Reminder List -->
       <div id="reminder-list"></div>
 
-      <!-- Quick Add -->
-      <div id="quick-add"></div>
+      <!-- New Reminder Button -->
+      <button id="new-reminder-btn" onclick="Views.showNewReminderModal()">
+        <span class="plus-icon">+</span> 新建提醒
+      </button>
     </main>
 
     <!-- Detail Panel -->
