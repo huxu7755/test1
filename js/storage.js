@@ -23,6 +23,7 @@ const Storage = (() => {
       } else {
         ListManager.loadLists([]);
         ReminderManager.loadData({ reminders: [], deletedReminders: [] });
+        _lists = ListManager.getLists();
         save();
       }
     } catch (e) {

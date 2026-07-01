@@ -425,6 +425,8 @@ const Views = (() => {
   function updateDetailField(field, value) {
     if (!currentDetailId) return;
     ReminderManager.updateReminder(currentDetailId, { [field]: value });
+    renderReminderList();
+    renderSidebar();
   }
 
   function toggleDetailFlag() {
@@ -434,6 +436,8 @@ const Views = (() => {
       const el = document.getElementById('detail-flag');
       if (el) el.classList.toggle('on', r.isFlagged);
     }
+    renderReminderList();
+    renderSidebar();
   }
 
   function toggleDetailLocation() {
@@ -532,6 +536,7 @@ const Views = (() => {
     const locationAddress = r ? r.locationAddress || '' : '';
     const hasMessaging = r ? r.hasMessaging : false;
     const image = r ? r.image : null;
+    nrmImageData = image;
 
     const priorityOptions = [0, 1, 2, 3].map(p =>
       `<option value="${p}" ${priority === p ? 'selected' : ''}>${PRIORITY_LABELS[p]}</option>`

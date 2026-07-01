@@ -98,9 +98,13 @@ const Backup = (() => {
     }
   }
 
+  let autoBackupInterval = null;
+
   function scheduleAutoBackup() {
+    // Clear existing interval before creating a new one
+    if (autoBackupInterval) clearInterval(autoBackupInterval);
     // Check every hour; if last backup > 24h, perform backup
-    setInterval(() => {
+    autoBackupInterval = setInterval(() => {
       const settings = Storage.loadSettings();
       if (settings.autoBackup && Date.now() - settings.lastBackup > 24 * 60 * 60 * 1000) {
         performAutoBackup();
@@ -109,7 +113,10 @@ const Backup = (() => {
   }
 
   function clearAutoBackup() {
-    // Interval is set once, no need to clear
+    if (autoBackupInterval) {
+      clearInterval(autoBackupInterval);
+      autoBackupInterval = null;
+    }
   }
 
   // Start auto-backup if enabled on load
